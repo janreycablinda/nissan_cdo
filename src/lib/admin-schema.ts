@@ -14,7 +14,15 @@ export type EntityConfig = {
   label: string;
   table: string;
   fields: Field[];
+  // Optional idempotent DDL run before any read/write so the table exists
+  // even on databases created before this entity was added (init.sql only
+  // runs on a fresh MySQL volume).
+  ensure?: string;
 };
+
+// Social platforms shown in the footer. The option values double as the keys
+// for the icon lookup in the Footer component — keep them in sync.
+export const SOCIAL_PLATFORMS = ['Facebook', 'Instagram', 'YouTube', 'TikTok', 'X', 'LinkedIn'] as const;
 
 export const ENTITIES: Record<string, EntityConfig> = {
   slides: {
@@ -53,6 +61,23 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: 'caption', label: 'Caption', type: 'textarea', required: true },
       { name: 'image_url', label: 'Image URL', type: 'image', required: true },
     ],
+  },
+  socials: {
+    key: 'socials',
+    label: 'Social Media',
+    table: 'socials',
+    fields: [
+      { name: 'platform', label: 'Platform', type: 'select', required: true, options: [...SOCIAL_PLATFORMS] },
+      { name: 'url', label: 'Profile URL', type: 'text', required: true, placeholder: 'https://facebook.com/nissancdo' },
+      { name: 'sort_order', label: 'Sort Order', type: 'number' },
+    ],
+    ensure: `CREATE TABLE IF NOT EXISTS socials (
+      id          INT AUTO_INCREMENT PRIMARY KEY,
+      platform    VARCHAR(60)  NOT NULL,
+      url         VARCHAR(255) NOT NULL,
+      sort_order  INT NOT NULL DEFAULT 0,
+      created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`,
   },
 };
 

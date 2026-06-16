@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS branches (
   hours         VARCHAR(120) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS socials (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  platform      VARCHAR(60)  NOT NULL,
+  url           VARCHAR(255) NOT NULL,
+  sort_order    INT NOT NULL DEFAULT 0,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS inquiries (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   full_name     VARCHAR(160) NOT NULL,
@@ -71,3 +79,8 @@ INSERT INTO offers (title, caption, image_url) VALUES
 
 INSERT INTO branches (name, address, phone, hours) VALUES
   ('Nissan Cagayan de Oro', 'Zone 7, Kauswagan National Highway, Cagayan de Oro City, Misamis Oriental', '0917-774-4602', 'Mon–Sat 8:00 AM – 6:00 PM');
+
+INSERT INTO socials (platform, url, sort_order) VALUES
+  ('Facebook',  'https://facebook.com/nissancdo', 1),
+  ('Instagram', '#',                              2),
+  ('YouTube',   '#',                              3);

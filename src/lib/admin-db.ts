@@ -7,6 +7,11 @@ function cfg(entity: string) {
   return c;
 }
 
+// Run an entity's optional idempotent DDL so its table exists on any database.
+async function ensureTable(c: ReturnType<typeof cfg>) {
+  if (c.ensure) await query(c.ensure);
+}
+
 function coerce(field: Field, raw: unknown) {
   if (field.type === 'number') {
     if (raw === '' || raw == null) return null;
@@ -26,6 +31,7 @@ function validate(fields: Field[], body: Record<string, unknown>) {
 
 export async function listRows(entity: string) {
   const c = cfg(entity);
+  await ensureTable(c);
   const hasSort = c.fields.some((f) => f.name === 'sort_order');
   const order = hasSort ? '`sort_order` ASC, `id` ASC' : '`id` ASC';
   return query(`SELECT * FROM \`${c.table}\` ORDER BY ${order}`);
@@ -33,6 +39,7 @@ export async function listRows(entity: string) {
 
 export async function createRow(entity: string, body: Record<string, unknown>) {
   const c = cfg(entity);
+  await ensureTable(c);
   validate(c.fields, body);
   const cols = c.fields.map((f) => `\`${f.name}\``).join(', ');
   const placeholders = c.fields.map(() => '?').join(', ');
@@ -42,6 +49,7 @@ export async function createRow(entity: string, body: Record<string, unknown>) {
 
 export async function updateRow(entity: string, id: string | number, body: Record<string, unknown>) {
   const c = cfg(entity);
+  await ensureTable(c);
   validate(c.fields, body);
   const sets = c.fields.map((f) => `\`${f.name}\`=?`).join(', ');
   const vals = c.fields.map((f) => coerce(f, body[f.name]));
@@ -51,5 +59,6 @@ export async function updateRow(entity: string, id: string | number, body: Recor
 
 export async function deleteRow(entity: string, id: string | number) {
   const c = cfg(entity);
+  await ensureTable(c);
   await query(`DELETE FROM \`${c.table}\` WHERE \`id\`=?`, [Number(id)]);
 }

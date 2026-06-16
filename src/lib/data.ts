@@ -26,6 +26,12 @@ export type Offer = {
   image_url: string;
 };
 
+export type Social = {
+  id: number;
+  platform: string;
+  url: string;
+};
+
 // Fallback data so the homepage still renders if MySQL is unreachable
 // (e.g. running `next dev` before `docker compose up`).
 const FALLBACK_VEHICLES: Vehicle[] = [
@@ -49,6 +55,23 @@ const FALLBACK_OFFERS: Offer[] = [
   { id: 2, title: 'NISSAN BUSINESS MOBILITY', caption: 'Let our vehicles bring you and your business to places.', image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=70' },
   { id: 3, title: 'NISSAN LEAF', caption: "The world's first mass-market EV.", image_url: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=800&q=70' },
 ];
+
+// Shown in the footer when the socials table is missing or empty, so the
+// "Nissan Social" block always renders.
+const FALLBACK_SOCIALS: Social[] = [
+  { id: 1, platform: 'Facebook', url: 'https://facebook.com/nissancdo' },
+  { id: 2, platform: 'Instagram', url: '#' },
+  { id: 3, platform: 'YouTube', url: '#' },
+];
+
+export async function getSocials(): Promise<Social[]> {
+  try {
+    const rows = await query<Social>('SELECT id, platform, url FROM socials ORDER BY sort_order ASC, id ASC');
+    return rows.length ? rows : FALLBACK_SOCIALS;
+  } catch {
+    return FALLBACK_SOCIALS;
+  }
+}
 
 export async function getVehicles(): Promise<Vehicle[]> {
   try {
