@@ -10,21 +10,19 @@ Replace `nissancagayandeoro.com` and `DROPLET_IP` throughout. Run commands as ro
 
 ## 1. DNS
 
-The apex `A` record is already configured in DigitalOcean DNS:
+Both `A` records are already configured in DigitalOcean DNS:
 
 ```
-nissancagayandeoro.com   A   DROPLET_IP
+nissancagayandeoro.com       A   DROPLET_IP
+www.nissancagayandeoro.com   A   DROPLET_IP
 ```
 
-Confirm it resolves to the droplet before requesting certs:
+Confirm they resolve to the droplet before requesting certs:
 
 ```bash
-dig +short nissancagayandeoro.com    # should print your droplet's public IP
+dig +short nissancagayandeoro.com
+dig +short www.nissancagayandeoro.com   # both should print your droplet's public IP
 ```
-
-(Optional) To also serve `www.`, add a second `A` record
-`www.nissancagayandeoro.com → DROPLET_IP`, then include it in the Nginx `server_name`
-and the certbot `-d` flags in steps 6–7.
 
 ## 2. Install Docker + firewall
 
@@ -94,15 +92,13 @@ The config is already set for `nissancagayandeoro.com`, so no editing is needed.
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d nissancagayandeoro.com
+certbot --nginx -d nissancagayandeoro.com -d www.nissancagayandeoro.com
 systemctl status certbot.timer         # confirms auto-renewal is active
 ```
 
-Use a `-d www.nissancagayandeoro.com` flag as well **only** if you added the `www` A record
-(step 1) — otherwise certbot's domain validation will fail.
-
 When prompted, choose to **redirect HTTP → HTTPS**. Then visit
-`https://nissancagayandeoro.com` — the site should load over HTTPS.
+`https://nissancagayandeoro.com` (and `https://www.nissancagayandeoro.com`) — the site should
+load over HTTPS.
 
 ## 8. phpMyAdmin (private, via SSH tunnel)
 
