@@ -1,0 +1,36 @@
+name: Deploy
+
+# Auto-deploy to the droplet on every push to main.
+# Requires three repository secrets (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOST     — droplet public IP
+#   DEPLOY_USER     — SSH user (root)
+#   DEPLOY_SSH_KEY  — private SSH key whose public half is in the droplet's authorized_keys
+# See DEPLOY.md → "Automatic deploys" for the one-time droplet/GitHub setup.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # allow manual "Run workflow" from the Actions tab
+
+# Never run two deploys at the same time; cancel an in-flight one if a newer push lands.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true # abort on the first failing command
+          script: |
+            set -e
+            cd /opt/nissan
+            git pull origin main
+            docker compose up -d --build
+            docker image prune -f

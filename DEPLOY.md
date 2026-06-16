@@ -114,11 +114,56 @@ ssh -L 8080:127.0.0.1:8080 root@DROPLET_IP
 
 ## Updating the site later
 
+### Manual
+
 ```bash
 cd /opt/nissan
 git pull
 docker compose up -d --build
 ```
+
+### Automatic deploys (GitHub Actions)
+
+`.github/workflows/deploy.yml` runs on every push to `main`: it SSHes into the droplet and
+runs `git pull && docker compose up -d --build`. One-time setup below.
+
+**1. Let the droplet pull the private repo headlessly (read-only deploy key):**
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/nissan_repo -N ""
+cat ~/.ssh/nissan_repo.pub        # add this to GitHub → repo Settings → Deploy keys (read-only)
+
+cat >> ~/.ssh/config <<'EOF'
+Host github.com
+  IdentityFile ~/.ssh/nissan_repo
+  IdentitiesOnly yes
+EOF
+
+cd /opt/nissan
+git remote set-url origin git@github.com:janreycablinda/nissan_cdo.git
+git pull origin main              # should succeed with no username/password prompt
+```
+
+**2. Let GitHub Actions SSH into the droplet:**
+
+```bash
+ssh-keygen -t ed25519 -f ~/deploy_action -N ""
+cat ~/deploy_action.pub >> ~/.ssh/authorized_keys
+cat ~/deploy_action               # copy the PRIVATE key for the secret below
+```
+
+In GitHub → repo **Settings → Secrets and variables → Actions**, add three secrets:
+
+| Secret           | Value                                   |
+| ---------------- | --------------------------------------- |
+| `DEPLOY_HOST`    | droplet public IP                       |
+| `DEPLOY_USER`    | `root`                                  |
+| `DEPLOY_SSH_KEY` | full contents of `~/deploy_action` (private key) |
+
+Then `rm ~/deploy_action ~/deploy_action.pub` from the droplet (GitHub keeps the private key;
+the public half is now in `authorized_keys`).
+
+**3. Test:** push any change to `main` → watch it under the repo's **Actions** tab.
 
 Uploaded media persists via the `./public/images/uploads` bind mount; database data persists
 in the `db_data` volume. **Never** run `docker compose down -v` in production — `-v` deletes
