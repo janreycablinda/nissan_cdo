@@ -106,7 +106,7 @@ export default async function Footer() {
       </div>
 
       <div className="container-x mt-12 border-t border-gray-100 pt-6 text-[11px]">
-        © {new Date().getFullYear()} Nissan Cagayan de Oro - test
+        © {new Date().getFullYear()} Nissan Cagayan de Oro - test 2
       </div>
     </footer>
   );
