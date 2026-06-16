@@ -4,22 +4,27 @@ Production deploy of the containerized stack (`web` + `db` + `phpmyadmin`) behin
 HTTPS. Assumes a fresh **Ubuntu 22.04/24.04** droplet, a **domain** pointed at it, and a
 **private GitHub repo** holding this project.
 
-Replace `YOURDOMAIN.com` and `DROPLET_IP` throughout. Run commands as root (or with `sudo`).
+Replace `nissancagayandeoro.com` and `DROPLET_IP` throughout. Run commands as root (or with `sudo`).
 
 ---
 
 ## 1. DNS
 
-Create `A` records pointing at the droplet, and wait for them to resolve:
+The apex `A` record is already configured in DigitalOcean DNS:
 
 ```
-YOURDOMAIN.com       A   DROPLET_IP
-www.YOURDOMAIN.com   A   DROPLET_IP
+nissancagayandeoro.com   A   DROPLET_IP
 ```
+
+Confirm it resolves to the droplet before requesting certs:
 
 ```bash
-dig +short YOURDOMAIN.com    # should print DROPLET_IP before requesting certs
+dig +short nissancagayandeoro.com    # should print your droplet's public IP
 ```
+
+(Optional) To also serve `www.`, add a second `A` record
+`www.nissancagayandeoro.com → DROPLET_IP`, then include it in the Nginx `server_name`
+and the certbot `-d` flags in steps 6–7.
 
 ## 2. Install Docker + firewall
 
@@ -78,21 +83,26 @@ MySQL seeds from `db/init.sql` on first run. (If the in-container `next build` i
 ```bash
 apt update && apt install -y nginx
 cp /opt/nissan/deploy/nginx.conf /etc/nginx/sites-available/nissan
-sed -i 's/YOURDOMAIN.com/your-real-domain.com/g' /etc/nginx/sites-available/nissan
 ln -s /etc/nginx/sites-available/nissan /etc/nginx/sites-enabled/nissan
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 ```
 
+The config is already set for `nissancagayandeoro.com`, so no editing is needed.
+
 ## 7. HTTPS (Let's Encrypt)
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d YOURDOMAIN.com -d www.YOURDOMAIN.com
+certbot --nginx -d nissancagayandeoro.com
 systemctl status certbot.timer         # confirms auto-renewal is active
 ```
 
-Visit `https://YOURDOMAIN.com` — the site should load over HTTPS.
+Use a `-d www.nissancagayandeoro.com` flag as well **only** if you added the `www` A record
+(step 1) — otherwise certbot's domain validation will fail.
+
+When prompted, choose to **redirect HTTP → HTTPS**. Then visit
+`https://nissancagayandeoro.com` — the site should load over HTTPS.
 
 ## 8. phpMyAdmin (private, via SSH tunnel)
 
