@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Slide } from '@/lib/data';
 
 export default function HeroSlider({ slides }: { slides: Slide[] }) {
   const [index, setIndex] = useState(0);
   const count = slides.length;
+  const dragStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (count <= 1) return;
@@ -17,8 +18,28 @@ export default function HeroSlider({ slides }: { slides: Slide[] }) {
 
   const go = (i: number) => setIndex((i + count) % count);
 
+  // Swipe / drag to change slides (touch + mouse via Pointer Events).
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (dragStartX.current === null || count <= 1) return;
+    const dx = e.clientX - dragStartX.current;
+    dragStartX.current = null;
+    const THRESHOLD = 50; // ignore small drags / taps so CTA clicks still work
+    if (dx > THRESHOLD) go(index - 1);
+    else if (dx < -THRESHOLD) go(index + 1);
+  };
+
   return (
-    <section id="top" className="relative h-[78vh] min-h-[460px] w-full overflow-hidden bg-nissan-dark">
+    <section
+      id="top"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => (dragStartX.current = null)}
+      style={{ touchAction: 'pan-y' }}
+      className="relative h-[78vh] min-h-[460px] w-full cursor-grab touch-pan-y overflow-hidden bg-nissan-dark active:cursor-grabbing"
+    >
       {slides.map((s, i) => (
         <div
           key={s.id}
@@ -62,14 +83,14 @@ export default function HeroSlider({ slides }: { slides: Slide[] }) {
           <button
             aria-label="Previous slide"
             onClick={() => go(index - 1)}
-            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-3xl text-white/70 transition hover:text-white"
+            className="absolute left-4 top-1/2 z-10 hidden -translate-y-1/2 text-3xl text-white/70 transition hover:text-white sm:block"
           >
             ‹
           </button>
           <button
             aria-label="Next slide"
             onClick={() => go(index + 1)}
-            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 text-3xl text-white/70 transition hover:text-white"
+            className="absolute right-4 top-1/2 z-10 hidden -translate-y-1/2 text-3xl text-white/70 transition hover:text-white sm:block"
           >
             ›
           </button>
