@@ -6,10 +6,6 @@ import { vehicleHref } from '@/lib/vehicle-pages';
 
 const TABS = ['All', 'Cars', 'Vans & Trucks', 'SUVs'] as const;
 
-function peso(n: number) {
-  return '₱' + n.toLocaleString('en-PH');
-}
-
 export default function VehiclesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -140,8 +136,6 @@ export default function VehiclesModal({ open, onClose }: { open: boolean; onClos
                       )}
                     </h2>
                     <p className="mt-1 flex-1 text-sm text-nissan-gray">{v.tagline}</p>
-                    <p className="mt-3 text-xs uppercase tracking-wide text-nissan-gray">Starts at</p>
-                    <p className="text-lg font-bold text-nissan-red">{peso(v.price_from)}</p>
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <a
                         href="tel:+639177744602"

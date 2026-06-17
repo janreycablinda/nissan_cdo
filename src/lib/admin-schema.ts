@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'image';
+export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'image' | 'password';
 
 export type Field = {
   name: string;
@@ -18,7 +18,23 @@ export type EntityConfig = {
   // even on databases created before this entity was added (init.sql only
   // runs on a fresh MySQL volume).
   ensure?: string;
+  // Restrict this entity to admin-role users (hidden from editors, enforced
+  // in middleware + the entity page).
+  adminOnly?: boolean;
 };
+
+export const USER_ROLES = ['admin', 'editor'] as const;
+
+export const USERS_TABLE = 'admin_users';
+
+export const ENSURE_USERS_TABLE = `CREATE TABLE IF NOT EXISTS ${USERS_TABLE} (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  username      VARCHAR(120) NOT NULL UNIQUE,
+  name          VARCHAR(160) NOT NULL DEFAULT '',
+  role          VARCHAR(20)  NOT NULL DEFAULT 'editor',
+  password_hash VARCHAR(255) NOT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`;
 
 // Social platforms shown in the footer. The option values double as the keys
 // for the icon lookup in the Footer component — keep them in sync.
@@ -79,6 +95,25 @@ export const ENTITIES: Record<string, EntityConfig> = {
       created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
   },
+  users: {
+    key: 'users',
+    label: 'Admin Users',
+    table: USERS_TABLE,
+    adminOnly: true,
+    fields: [
+      { name: 'username', label: 'Username', type: 'text', required: true, placeholder: 'jdelacruz' },
+      { name: 'name', label: 'Full Name', type: 'text', placeholder: 'Juan dela Cruz' },
+      { name: 'role', label: 'Role', type: 'select', required: true, options: [...USER_ROLES] },
+      { name: 'password_hash', label: 'Password', type: 'password', required: true },
+    ],
+    ensure: ENSURE_USERS_TABLE,
+  },
 };
 
 export const ENTITY_KEYS = Object.keys(ENTITIES);
+
+// Entity keys restricted to admin-role users — used to hide nav links and to
+// gate routes in middleware.
+export const ADMIN_ONLY_ENTITY_KEYS = Object.values(ENTITIES)
+  .filter((e) => e.adminOnly)
+  .map((e) => e.key);

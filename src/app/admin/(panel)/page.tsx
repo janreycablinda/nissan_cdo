@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import { ENTITIES } from '@/lib/admin-schema';
 import { listRows } from '@/lib/admin-db';
+import { currentSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
+  const isAdmin = currentSession()?.role === 'admin';
+  const entities = Object.values(ENTITIES).filter((e) => !e.adminOnly || isAdmin);
   const counts = await Promise.all(
-    Object.values(ENTITIES).map(async (e) => {
+    entities.map(async (e) => {
       try {
         const rows = (await listRows(e.key)) as unknown[];
         return { ...e, count: rows.length };

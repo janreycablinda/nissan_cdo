@@ -184,7 +184,9 @@ export default function AdminEntity({
                 <td className="px-3 py-2 text-nissan-gray">{String(row.id)}</td>
                 {fields.map((f) => (
                   <td key={f.name} className="max-w-[220px] truncate px-3 py-2">
-                    {f.name === 'image_url' && row[f.name] ? (
+                    {f.type === 'password' ? (
+                      '••••••••'
+                    ) : f.name === 'image_url' && row[f.name] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={String(row[f.name])} alt="" className="h-10 w-16 object-contain" />
                     ) : (
@@ -319,6 +321,17 @@ export default function AdminEntity({
                       required={f.required}
                       rows={3}
                       placeholder={f.placeholder}
+                      onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                      className="w-full border border-gray-300 px-3 py-2 text-sm focus:border-nissan-red focus:outline-none"
+                    />
+                  ) : f.type === 'password' ? (
+                    <input
+                      type="password"
+                      value={form[f.name]}
+                      // On edit, leave blank to keep the existing password.
+                      required={f.required && editingId == null}
+                      autoComplete="new-password"
+                      placeholder={editingId ? 'Leave blank to keep current' : f.placeholder}
                       onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
                       className="w-full border border-gray-300 px-3 py-2 text-sm focus:border-nissan-red focus:outline-none"
                     />

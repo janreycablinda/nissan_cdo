@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import { ENTITIES } from '@/lib/admin-schema';
+import { currentSession } from '@/lib/auth';
 import LogoutButton from '@/components/admin/LogoutButton';
 
 export const dynamic = 'force-dynamic';
 
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
+  const session = currentSession();
+  const isAdmin = session?.role === 'admin';
+  const entities = Object.values(ENTITIES).filter((e) => !e.adminOnly || isAdmin);
+
   return (
     <div className="flex min-h-screen bg-nissan-light">
       <aside className="flex w-60 flex-col bg-nissan-dark p-5 text-white">
@@ -21,7 +26,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
           >
             Dashboard
           </Link>
-          {Object.values(ENTITIES).map((e) => (
+          {entities.map((e) => (
             <Link
               key={e.key}
               href={`/admin/${e.key}`}
@@ -45,7 +50,21 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
           </a>
         </nav>
 
-        <LogoutButton />
+        {/* Account actions */}
+        <div className="mt-6 border-t border-white/10 pt-4">
+          {session && (
+            <p className="mb-3 px-3 text-[10px] uppercase tracking-wide text-white/40">
+              {session.username} · {session.role}
+            </p>
+          )}
+          <Link
+            href="/admin/password"
+            className="mb-2 block px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
+            Change Password
+          </Link>
+          <LogoutButton />
+        </div>
       </aside>
 
       <main className="flex-1 overflow-x-auto p-6 sm:p-10">{children}</main>

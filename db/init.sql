@@ -48,6 +48,15 @@ CREATE TABLE IF NOT EXISTS socials (
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS admin_users (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  username      VARCHAR(120) NOT NULL UNIQUE,
+  name          VARCHAR(160) NOT NULL DEFAULT '',
+  role          VARCHAR(20)  NOT NULL DEFAULT 'editor',
+  password_hash VARCHAR(255) NOT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS inquiries (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   full_name     VARCHAR(160) NOT NULL,
