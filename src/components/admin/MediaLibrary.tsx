@@ -53,13 +53,23 @@ export default function MediaLibrary({ items }: { items: MediaItem[] }) {
     }
   }
 
+  // Copy the full, absolute URL (e.g. https://nissancagayandeoro.com/images/uploads/…)
+  // using whatever domain the admin is being viewed on. The stored url stays
+  // root-relative so previews/Image URL fields remain host-portable.
+  function absoluteUrl(url: string) {
+    if (/^https?:\/\//i.test(url)) return url;
+    if (typeof window !== 'undefined') return window.location.origin + url;
+    return url;
+  }
+
   async function copy(url: string) {
+    const full = absoluteUrl(url);
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(full);
       setCopied(url);
       setTimeout(() => setCopied(''), 1500);
     } catch {
-      window.prompt('Copy this link:', url);
+      window.prompt('Copy this link:', full);
     }
   }
 
