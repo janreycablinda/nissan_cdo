@@ -33,4 +33,10 @@ jobs:
             cd /opt/nissan
             git pull origin main
             docker compose up -d --build
+            # Retain hashed static assets across deploys so tabs loaded before a
+            # deploy don't 404 on old chunks. Copy is additive (docker cp never
+            # deletes); prune ages out builds older than 7 days to bound disk use.
+            mkdir -p /opt/nissan/next-cache/_next/static
+            docker cp nissan_web:/app/.next/static/. /opt/nissan/next-cache/_next/static/
+            find /opt/nissan/next-cache/_next/static -type f -mtime +7 -delete
             docker image prune -f

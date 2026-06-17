@@ -14,6 +14,7 @@ const NAV: { label: string; href?: string; vehicles?: boolean }[] = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-white">
@@ -79,11 +80,72 @@ export default function Header() {
             href="https://facebook.com/nissancdo"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-nissan-red px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-red-700"
+            className="hidden bg-nissan-red px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-red-700 lg:inline-block"
           >
             Request a Quote
           </a>
+
+          {/* Hamburger toggle (mobile / tablet) */}
+          <button
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            className="flex h-10 w-10 items-center justify-center text-nissan-dark lg:hidden"
+          >
+            {mobileOpen ? (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            )}
+          </button>
         </div>
+
+        {/* Mobile menu panel */}
+        {mobileOpen && (
+          <nav className="border-t border-gray-100 lg:hidden">
+            <div className="container-x flex flex-col py-2">
+              {NAV.map((item) =>
+                item.vehicles ? (
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      setMobileOpen(false);
+                      setMenuOpen(true);
+                    }}
+                    className="py-3 text-left text-sm font-semibold uppercase tracking-wide text-nissan-gray transition hover:text-nissan-red"
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="py-3 text-sm font-semibold uppercase tracking-wide text-nissan-gray transition hover:text-nissan-red"
+                  >
+                    {item.label}
+                  </a>
+                ),
+              )}
+              <a
+                href="https://facebook.com/nissancdo"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileOpen(false)}
+                className="mt-2 bg-nissan-red px-5 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-red-700"
+              >
+                Request a Quote
+              </a>
+            </div>
+          </nav>
+        )}
       </div>
 
       <VehiclesModal open={menuOpen} onClose={() => setMenuOpen(false)} />
