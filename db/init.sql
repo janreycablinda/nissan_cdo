@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
   price_from        DECIMAL(12,2) NOT NULL,
   image_url         VARCHAR(255) NOT NULL,
   brochure_url      VARCHAR(255) NOT NULL DEFAULT '',
+  variants          TEXT,
   show_in_menu      TINYINT(1) NOT NULL DEFAULT 1,
   show_in_brochures TINYINT(1) NOT NULL DEFAULT 1,
   sort_order        INT NOT NULL DEFAULT 0,
@@ -72,14 +73,14 @@ CREATE TABLE IF NOT EXISTS inquiries (
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO vehicles (name, category, tagline, price_from, image_url, brochure_url, sort_order) VALUES
-  ('Kicks e-POWER', 'SUVs',          'Electric drive. No charging needed.', 1209000.00, '/images/vehicles/Kicks.png',  'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/kicks_brochure.pdf',  1),
-  ('Urvan',         'Vans & Trucks', 'Move more. Do more.',                 1850000.00, '/images/vehicles/URVAN.jpg',  '',                                                                                    2),
-  ('Patrol',        'SUVs',          'The ultimate flagship SUV.',          4900000.00, '/images/vehicles/PATROL.jpg', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/patrol_brochure.pdf', 3),
-  ('Almera',        'Cars',          'Bold, efficient, and turbocharged.',   768000.00, '/images/vehicles/almera.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/almera_brochure.pdf', 4),
-  ('Terra',         'SUVs',          'Adventure, redefined.',               1779000.00, '/images/vehicles/Terra.jpg',  'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/terra_brochure.pdf',  5),
-  ('Navara',        'Vans & Trucks', 'Built to dominate every terrain.',    1199000.00, '/images/vehicles/Navara.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/navara_brochure.pdf', 6),
-  ('Livina',        'Cars',          'Seven seats. Endless possibilities.', 1029000.00, '/images/vehicles/Livina.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/livina_brochure.pdf', 7);
+INSERT INTO vehicles (name, category, tagline, price_from, image_url, brochure_url, variants, sort_order) VALUES
+  ('Kicks e-POWER', 'SUVs',          'Electric drive. No charging needed.', 1179000.00, '/images/vehicles/Kicks.png',  'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/kicks_brochure.pdf',  '[{"name":"EL","price":1179000},{"name":"VE","price":1329000},{"name":"VL","price":1479000}]', 1),
+  ('Urvan',         'Vans & Trucks', 'Move more. Do more.',                 1280000.00, '/images/vehicles/URVAN.jpg',  '',                                                                                    '[{"name":"Standard 15-Seater","price":1280000},{"name":"Premium","price":1650000},{"name":"Premium S","price":2165000}]', 2),
+  ('Patrol',        'SUVs',          'The ultimate flagship SUV.',          5335000.00, '/images/vehicles/PATROL.jpg', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/patrol_brochure.pdf', '[{"name":"Royale","price":5335000},{"name":"Premium","price":5385000}]', 3),
+  ('Almera',        'Cars',          'Bold, efficient, and turbocharged.',   845000.00, '/images/vehicles/almera.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/almera_brochure.pdf', '[{"name":"MT","price":845000},{"name":"VE CVT","price":1045000},{"name":"VL Turbo CVT","price":1199000}]', 4),
+  ('Terra',         'SUVs',          'Adventure, redefined.',               1969000.00, '/images/vehicles/Terra.jpg',  'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/terra_brochure.pdf',  '[{"name":"EL 4x2 AT","price":1969000},{"name":"VE 4x2 AT","price":2189000},{"name":"VL 4x4 AT","price":2469000}]', 5),
+  ('Navara',        'Vans & Trucks', 'Built to dominate every terrain.',    1240000.00, '/images/vehicles/Navara.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/navara_brochure.pdf', '[{"name":"Calibre 4x2 MT","price":1240000},{"name":"VE 4x2 AT","price":1560000},{"name":"VL 4x4 AT","price":2220000}]', 6),
+  ('Livina',        'Cars',          'Seven seats. Endless possibilities.', 1094000.00, '/images/vehicles/Livina.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/livina_brochure.pdf', '[{"name":"E MT","price":1094000},{"name":"VE CVT","price":1199000},{"name":"VL CVT","price":1274000}]', 7);
 
 INSERT INTO slides (kicker, title_line1, title_line2, image_url, cta_label, cta_href, sort_order) VALUES
   ('The All-New Nissan Patrol', 'Dare to Be', 'Exceptional', 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1920&q=75', 'Discover More', '#vehicles', 1),

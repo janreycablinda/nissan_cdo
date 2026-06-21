@@ -22,7 +22,7 @@ export default function SpecialOffers({ offers }: { offers: Offer[] }) {
             <h3 className="text-2xl font-light text-center tracking-wide sm:text-3xl">
               NISSAN INTELLIGENT MOBILITY TOUR 5.0
             </h3>
-            <p className="mt-2 w-full text-center text-black text-sm uppercase tracking-wide text-gray-200">
+            <p className="mt-2 w-full text-center !text-black text-sm uppercase tracking-wide">
               Experience a new era of excitement as Nissan shapes the future of mobility through technology
             </p>
           </div>

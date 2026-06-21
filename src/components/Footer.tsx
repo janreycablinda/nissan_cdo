@@ -67,6 +67,7 @@ export default async function Footer() {
             Resources
           </h4>
           <ul className="space-y-2 text-xs">
+            <li><a href="/vehicles/new/price-guide" className="text-nissan-red hover:underline">Price Guide</a></li>
             <li><a href="/vehicles/brochures" className="text-nissan-red hover:underline">Download Brochure</a></li>
           </ul>
         </div>

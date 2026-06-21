@@ -11,7 +11,75 @@ const PAGE_SIZE = 10;
 
 function emptyForm(fields: Field[]): Record<string, string> {
   // New records default toggles to on ('1') so vehicles are visible unless hidden.
-  return Object.fromEntries(fields.map((f) => [f.name, f.type === 'toggle' ? '1' : '']));
+  return Object.fromEntries(
+    fields.map((f) => [f.name, f.type === 'toggle' ? '1' : f.type === 'variants' ? '[]' : '']),
+  );
+}
+
+type VariantRow = { name: string; price: string };
+
+function parseVariants(raw: string): VariantRow[] {
+  try {
+    const arr = JSON.parse(raw || '[]');
+    if (!Array.isArray(arr)) return [];
+    return arr.map((v) => ({
+      name: String(v?.name ?? ''),
+      price: v?.price == null || v.price === '' ? '' : String(v.price),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Repeatable editor for a vehicle's variant/price list. Serialises to the JSON
+// string held in the parent form state on every change.
+function VariantsEditor({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const rows = parseVariants(value);
+  const commit = (next: VariantRow[]) => onChange(JSON.stringify(next));
+  const update = (i: number, patch: Partial<VariantRow>) =>
+    commit(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  return (
+    <div className="space-y-2">
+      {rows.length > 0 && (
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={row.name}
+                placeholder="Variant (e.g. VL 4x4 AT)"
+                onChange={(e) => update(i, { name: e.target.value })}
+                className="flex-1 border border-gray-300 px-3 py-2 text-sm focus:border-nissan-red focus:outline-none"
+              />
+              <input
+                type="number"
+                value={row.price}
+                placeholder="Price (₱)"
+                onChange={(e) => update(i, { price: e.target.value })}
+                className="w-36 border border-gray-300 px-3 py-2 text-sm focus:border-nissan-red focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => commit(rows.filter((_, idx) => idx !== i))}
+                aria-label="Remove variant"
+                className="shrink-0 px-2 text-lg leading-none text-nissan-gray transition hover:text-nissan-red"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => commit([...rows, { name: '', price: '' }])}
+        className="border border-gray-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-nissan-dark transition hover:border-nissan-red hover:text-nissan-red"
+      >
+        + Add Variant
+      </button>
+    </div>
+  );
 }
 
 export default function AdminEntity({
@@ -187,6 +255,10 @@ export default function AdminEntity({
                   <td key={f.name} className="max-w-[220px] truncate px-3 py-2">
                     {f.type === 'password' ? (
                       '••••••••'
+                    ) : f.type === 'variants' ? (
+                      <span className="text-nissan-gray">
+                        {parseVariants(String(row[f.name] ?? '')).length} variant(s)
+                      </span>
                     ) : f.type === 'toggle' ? (
                       <span
                         className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
@@ -280,7 +352,7 @@ export default function AdminEntity({
 
             <form onSubmit={save} className="grid gap-4 p-6 sm:grid-cols-2">
               {fields.map((f) => (
-                <div key={f.name} className={f.type === 'textarea' ? 'sm:col-span-2' : ''}>
+                <div key={f.name} className={f.type === 'textarea' || f.type === 'variants' ? 'sm:col-span-2' : ''}>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide">
                     {f.label} {f.required && <span className="text-nissan-red">*</span>}
                   </label>
@@ -312,6 +384,11 @@ export default function AdminEntity({
                         />
                       )}
                     </div>
+                  ) : f.type === 'variants' ? (
+                    <VariantsEditor
+                      value={form[f.name]}
+                      onChange={(next) => setForm({ ...form, [f.name]: next })}
+                    />
                   ) : f.type === 'toggle' ? (
                     <label className="inline-flex cursor-pointer items-center gap-2 py-2">
                       <input

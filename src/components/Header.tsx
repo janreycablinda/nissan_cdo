@@ -5,11 +5,9 @@ import VehiclesModal from './VehiclesModal';
 
 const NAV: { label: string; href?: string; vehicles?: boolean }[] = [
   { label: 'Vehicles', vehicles: true },
-  { label: 'Owners', href: '/#offers' },
+  { label: 'Fleet', href: '/#offers' },
   { label: 'Services', href: '/#offers' },
-  { label: 'Finance', href: '/#offers' },
-  { label: 'Nissan Brand', href: '/#offers' },
-  { label: 'Resources', href: '/vehicles/brochures' },
+  { label: 'Price guide', href: '/vehicles/new/price-guide' },
 ];
 
 export default function Header() {
@@ -27,7 +25,9 @@ export default function Header() {
             <a href="tel:09176218445" className="hover:underline">0917-621-8445</a>
           </span>
           <nav className="hidden items-center gap-3 uppercase md:flex">
-            <a href="#" className="hover:underline">At-Home Shopping</a>
+            <a href="#" className="hover:underline">ELECTRIFICATION</a>
+            <span className="opacity-50">|</span>
+            <a href="#" className="hover:underline">FIND A DEALER</a>
             <span className="opacity-50">|</span>
             <a href="/#offers" className="hover:underline">Nissan Intelligent Mobility</a>
             <span className="opacity-50">|</span>

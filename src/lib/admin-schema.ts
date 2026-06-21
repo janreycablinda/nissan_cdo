@@ -1,4 +1,12 @@
-export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'image' | 'password' | 'toggle';
+export type FieldType =
+  | 'text'
+  | 'number'
+  | 'textarea'
+  | 'select'
+  | 'image'
+  | 'password'
+  | 'toggle'
+  | 'variants';
 
 export type Field = {
   name: string;
@@ -70,6 +78,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: 'price_from', label: 'Price From (₱)', type: 'number', required: true },
       { name: 'image_url', label: 'Image URL', type: 'image', required: true, placeholder: '/images/vehicles/…' },
       { name: 'brochure_url', label: 'Brochure Link', type: 'text', placeholder: 'https://… or /brochures/patrol.pdf' },
+      { name: 'variants', label: 'Variants & Pricing', type: 'variants' },
       { name: 'show_in_menu', label: 'Show on Menu & Homepage', type: 'toggle' },
       { name: 'show_in_brochures', label: 'Show on Brochure Page', type: 'toggle' },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
@@ -78,6 +87,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       `ALTER TABLE vehicles ADD COLUMN brochure_url VARCHAR(255) NOT NULL DEFAULT ''`,
       `ALTER TABLE vehicles ADD COLUMN show_in_menu TINYINT(1) NOT NULL DEFAULT 1`,
       `ALTER TABLE vehicles ADD COLUMN show_in_brochures TINYINT(1) NOT NULL DEFAULT 1`,
+      `ALTER TABLE vehicles ADD COLUMN variants TEXT`,
     ],
   },
   offers: {

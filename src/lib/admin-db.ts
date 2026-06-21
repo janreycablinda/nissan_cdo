@@ -16,10 +16,16 @@ const BENIGN_DDL_ERRORS = new Set([
   'ER_DUP_KEYNAME',        // ADD INDEX/KEY that already exists
 ]);
 
+// Entities whose DDL has already run this process — the migrations are
+// idempotent, so running them once per process is enough and avoids hammering
+// the DB with redundant ALTERs (and connections) on every request.
+const globalForEnsure = globalThis as unknown as { __ensuredEntities?: Set<string> };
+const ensured = (globalForEnsure.__ensuredEntities ??= new Set<string>());
+
 // Run an entity's optional idempotent DDL so its table (and any later-added
 // columns) exist on any database, swallowing "already exists" errors.
 async function ensureTable(c: ReturnType<typeof cfg>) {
-  if (!c.ensure) return;
+  if (!c.ensure || ensured.has(c.key)) return;
   const statements = Array.isArray(c.ensure) ? c.ensure : [c.ensure];
   for (const sql of statements) {
     try {
@@ -28,6 +34,7 @@ async function ensureTable(c: ReturnType<typeof cfg>) {
       if (!BENIGN_DDL_ERRORS.has((err as { code?: string }).code ?? '')) throw err;
     }
   }
+  ensured.add(c.key);
 }
 
 // Public hook so non-admin code paths (e.g. the homepage data layer) can run an
@@ -48,6 +55,23 @@ function coerce(field: Field, raw: unknown) {
   if (field.type === 'toggle') {
     // Form sends '1'/'0'; normalise anything truthy-looking to 1.
     return String(raw) === '1' || raw === true || String(raw).toLowerCase() === 'true' ? 1 : 0;
+  }
+  if (field.type === 'variants') {
+    // Form sends a JSON string of [{name, price}]. Normalise: drop blank rows,
+    // coerce price to a number, and re-stringify for storage.
+    let parsed: unknown = [];
+    try {
+      parsed = JSON.parse(typeof raw === 'string' && raw ? raw : '[]');
+    } catch {
+      parsed = [];
+    }
+    const clean = (Array.isArray(parsed) ? parsed : [])
+      .map((v) => ({
+        name: String((v as any)?.name ?? '').trim(),
+        price: Number((v as any)?.price) || 0,
+      }))
+      .filter((v) => v.name !== '');
+    return JSON.stringify(clean);
   }
   if (field.type === 'number') {
     if (raw === '' || raw == null) return null;
