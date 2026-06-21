@@ -8,9 +8,32 @@ function cfg(entity: string) {
   return c;
 }
 
-// Run an entity's optional idempotent DDL so its table exists on any database.
+// MySQL error codes for "the thing you're creating already exists" — safe to
+// ignore so the idempotent DDL can run on every request.
+const BENIGN_DDL_ERRORS = new Set([
+  'ER_TABLE_EXISTS_ERROR', // CREATE TABLE (without IF NOT EXISTS) on existing table
+  'ER_DUP_FIELDNAME',      // ADD COLUMN that already exists
+  'ER_DUP_KEYNAME',        // ADD INDEX/KEY that already exists
+]);
+
+// Run an entity's optional idempotent DDL so its table (and any later-added
+// columns) exist on any database, swallowing "already exists" errors.
 async function ensureTable(c: ReturnType<typeof cfg>) {
-  if (c.ensure) await query(c.ensure);
+  if (!c.ensure) return;
+  const statements = Array.isArray(c.ensure) ? c.ensure : [c.ensure];
+  for (const sql of statements) {
+    try {
+      await query(sql);
+    } catch (err) {
+      if (!BENIGN_DDL_ERRORS.has((err as { code?: string }).code ?? '')) throw err;
+    }
+  }
+}
+
+// Public hook so non-admin code paths (e.g. the homepage data layer) can run an
+// entity's idempotent DDL before reading.
+export async function ensureEntity(entity: string) {
+  await ensureTable(cfg(entity));
 }
 
 function isBlank(raw: unknown) {
@@ -21,6 +44,10 @@ function coerce(field: Field, raw: unknown) {
   if (field.type === 'password') {
     // Caller must guarantee a non-blank value reaches here.
     return hashPassword(String(raw));
+  }
+  if (field.type === 'toggle') {
+    // Form sends '1'/'0'; normalise anything truthy-looking to 1.
+    return String(raw) === '1' || raw === true || String(raw).toLowerCase() === 'true' ? 1 : 0;
   }
   if (field.type === 'number') {
     if (raw === '' || raw == null) return null;
@@ -57,7 +84,7 @@ export async function listRows(entity: string) {
   const cols = c.fields.filter((f) => f.type !== 'password').map((f) => `\`${f.name}\``);
   const select = ['`id`', ...cols].join(', ');
   const hasSort = c.fields.some((f) => f.name === 'sort_order');
-  const order = hasSort ? '`sort_order` ASC, `id` ASC' : '`id` ASC';
+  const order = c.defaultOrder ?? (hasSort ? '`sort_order` ASC, `id` ASC' : '`id` ASC');
   return query(`SELECT ${select} FROM \`${c.table}\` ORDER BY ${order}`);
 }
 

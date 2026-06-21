@@ -9,22 +9,21 @@ export default function SpecialOffers({ offers }: { offers: Offer[] }) {
 
         {/* Feature banner */}
         <a
-          href="#vehicles"
-          className="relative mt-8 flex h-48 items-center overflow-hidden bg-nissan-dark sm:h-56"
+          className="relative mt-8 flex h-48 items-center overflow-hidden bg-nissan-dark sm:h-56 lg:h-[612px]"
         >
           <div
-            className="absolute inset-0 bg-cover bg-center opacity-50"
+            className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage:
-                "url('https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=1280&q=70')",
+                "url('https://nissancagayandeoro.com/images/uploads/NEW-DESKTOP-1782055794850.jpg')",
             }}
           />
-          <div className="relative z-10 px-8 text-white sm:px-12">
-            <h3 className="text-2xl font-light tracking-wide sm:text-3xl">
-              Nissan <span className="font-semibold">Intelligent</span> Mobility
+          <div className="relative text-center z-10 px-8 text-black sm:px-12 w-full">
+            <h3 className="text-2xl font-light text-center tracking-wide sm:text-3xl">
+              NISSAN INTELLIGENT MOBILITY TOUR 5.0
             </h3>
-            <p className="mt-2 max-w-md text-sm uppercase tracking-wide text-gray-200">
-              Find out more about Nissan&apos;s suite of advanced technology
+            <p className="mt-2 w-full text-center text-black text-sm uppercase tracking-wide text-gray-200">
+              Experience a new era of excitement as Nissan shapes the future of mobility through technology
             </p>
           </div>
         </a>

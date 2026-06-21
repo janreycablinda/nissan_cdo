@@ -2,14 +2,17 @@
 -- Auto-loaded by the MySQL container on first start.
 
 CREATE TABLE IF NOT EXISTS vehicles (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  name          VARCHAR(120) NOT NULL,
-  category      VARCHAR(60)  NOT NULL,
-  tagline       VARCHAR(255) NOT NULL,
-  price_from    DECIMAL(12,2) NOT NULL,
-  image_url     VARCHAR(255) NOT NULL,
-  sort_order    INT NOT NULL DEFAULT 0,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  name              VARCHAR(120) NOT NULL,
+  category          VARCHAR(60)  NOT NULL,
+  tagline           VARCHAR(255) NOT NULL,
+  price_from        DECIMAL(12,2) NOT NULL,
+  image_url         VARCHAR(255) NOT NULL,
+  brochure_url      VARCHAR(255) NOT NULL DEFAULT '',
+  show_in_menu      TINYINT(1) NOT NULL DEFAULT 1,
+  show_in_brochures TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order        INT NOT NULL DEFAULT 0,
+  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS slides (
@@ -59,22 +62,24 @@ CREATE TABLE IF NOT EXISTS admin_users (
 
 CREATE TABLE IF NOT EXISTS inquiries (
   id            INT AUTO_INCREMENT PRIMARY KEY,
+  salutation    VARCHAR(20)  NOT NULL DEFAULT '',
   full_name     VARCHAR(160) NOT NULL,
   email         VARCHAR(160) NOT NULL,
   phone         VARCHAR(60)  NOT NULL,
+  inquiry_type  VARCHAR(60)  NOT NULL DEFAULT '',
   vehicle       VARCHAR(120),
   message       TEXT,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO vehicles (name, category, tagline, price_from, image_url, sort_order) VALUES
-  ('Kicks e-POWER', 'SUVs',          'Electric drive. No charging needed.', 1209000.00, '/images/vehicles/Kicks.png',  1),
-  ('Urvan',         'Vans & Trucks', 'Move more. Do more.',                 1850000.00, '/images/vehicles/URVAN.jpg',  2),
-  ('Patrol',        'SUVs',          'The ultimate flagship SUV.',          4900000.00, '/images/vehicles/PATROL.jpg', 3),
-  ('Almera',        'Cars',          'Bold, efficient, and turbocharged.',   768000.00, '/images/vehicles/almera.png', 4),
-  ('Terra',         'SUVs',          'Adventure, redefined.',               1779000.00, '/images/vehicles/Terra.jpg',  5),
-  ('Navara',        'Vans & Trucks', 'Built to dominate every terrain.',    1199000.00, '/images/vehicles/Navara.png', 6),
-  ('Livina',        'Cars',          'Seven seats. Endless possibilities.', 1029000.00, '/images/vehicles/Livina.png', 7);
+INSERT INTO vehicles (name, category, tagline, price_from, image_url, brochure_url, sort_order) VALUES
+  ('Kicks e-POWER', 'SUVs',          'Electric drive. No charging needed.', 1209000.00, '/images/vehicles/Kicks.png',  'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/kicks_brochure.pdf',  1),
+  ('Urvan',         'Vans & Trucks', 'Move more. Do more.',                 1850000.00, '/images/vehicles/URVAN.jpg',  '',                                                                                    2),
+  ('Patrol',        'SUVs',          'The ultimate flagship SUV.',          4900000.00, '/images/vehicles/PATROL.jpg', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/patrol_brochure.pdf', 3),
+  ('Almera',        'Cars',          'Bold, efficient, and turbocharged.',   768000.00, '/images/vehicles/almera.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/almera_brochure.pdf', 4),
+  ('Terra',         'SUVs',          'Adventure, redefined.',               1779000.00, '/images/vehicles/Terra.jpg',  'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/terra_brochure.pdf',  5),
+  ('Navara',        'Vans & Trucks', 'Built to dominate every terrain.',    1199000.00, '/images/vehicles/Navara.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/navara_brochure.pdf', 6),
+  ('Livina',        'Cars',          'Seven seats. Endless possibilities.', 1029000.00, '/images/vehicles/Livina.png', 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures/livina_brochure.pdf', 7);
 
 INSERT INTO slides (kicker, title_line1, title_line2, image_url, cta_label, cta_href, sort_order) VALUES
   ('The All-New Nissan Patrol', 'Dare to Be', 'Exceptional', 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1920&q=75', 'Discover More', '#vehicles', 1),

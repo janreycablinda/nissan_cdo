@@ -53,7 +53,7 @@ export default async function Footer() {
             Customer Service
           </h4>
           <ul className="space-y-2 text-xs">
-            <li><a href="#vehicles" className="text-nissan-red hover:underline">Contact Us</a></li>
+            <li><a href="/customer-service/contact-us" className="text-nissan-red hover:underline">Contact Us</a></li>
             <li className="pt-1">24/7 Customer Assistance Center:</li>
             <li className="font-semibold text-nissan-dark">
               <a href="tel:+0284036595" className="hover:text-nissan-red">(+02) 8403-6595</a>,{' '}
@@ -67,7 +67,7 @@ export default async function Footer() {
             Resources
           </h4>
           <ul className="space-y-2 text-xs">
-            <li><a href="#offers" className="text-nissan-red hover:underline">Download Brochure</a></li>
+            <li><a href="/vehicles/brochures" className="text-nissan-red hover:underline">Download Brochure</a></li>
           </ul>
         </div>
 

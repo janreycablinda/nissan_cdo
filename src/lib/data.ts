@@ -1,4 +1,5 @@
 import { query } from './db';
+import { ensureEntity } from './admin-db';
 
 export type Vehicle = {
   id: number;
@@ -7,6 +8,9 @@ export type Vehicle = {
   tagline: string;
   price_from: number;
   image_url: string;
+  brochure_url: string;
+  show_in_menu: number; // 1 = shown on menu & homepage
+  show_in_brochures: number; // 1 = shown on the brochure page
 };
 
 export type Slide = {
@@ -34,14 +38,16 @@ export type Social = {
 
 // Fallback data so the homepage still renders if MySQL is unreachable
 // (e.g. running `next dev` before `docker compose up`).
+const CDN_BROCHURES = 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures';
+
 const FALLBACK_VEHICLES: Vehicle[] = [
-  { id: 1, name: 'Kicks e-POWER', category: 'SUVs', tagline: 'Electric drive. No charging needed.', price_from: 1209000, image_url: '/images/vehicles/Kicks.png' },
-  { id: 2, name: 'Urvan', category: 'Vans & Trucks', tagline: 'Move more. Do more.', price_from: 1850000, image_url: '/images/vehicles/URVAN.jpg' },
-  { id: 3, name: 'Patrol', category: 'SUVs', tagline: 'The ultimate flagship SUV.', price_from: 4900000, image_url: '/images/vehicles/PATROL.jpg' },
-  { id: 4, name: 'Almera', category: 'Cars', tagline: 'Bold, efficient, and turbocharged.', price_from: 768000, image_url: '/images/vehicles/almera.png' },
-  { id: 5, name: 'Terra', category: 'SUVs', tagline: 'Adventure, redefined.', price_from: 1779000, image_url: '/images/vehicles/Terra.jpg' },
-  { id: 6, name: 'Navara', category: 'Vans & Trucks', tagline: 'Built to dominate every terrain.', price_from: 1199000, image_url: '/images/vehicles/Navara.png' },
-  { id: 7, name: 'Livina', category: 'Cars', tagline: 'Seven seats. Endless possibilities.', price_from: 1029000, image_url: '/images/vehicles/Livina.png' },
+  { id: 1, name: 'Kicks e-POWER', category: 'SUVs', tagline: 'Electric drive. No charging needed.', price_from: 1209000, image_url: '/images/vehicles/Kicks.png', brochure_url: `${CDN_BROCHURES}/kicks_brochure.pdf`, show_in_menu: 1, show_in_brochures: 1 },
+  { id: 2, name: 'Urvan', category: 'Vans & Trucks', tagline: 'Move more. Do more.', price_from: 1850000, image_url: '/images/vehicles/URVAN.jpg', brochure_url: '', show_in_menu: 1, show_in_brochures: 1 },
+  { id: 3, name: 'Patrol', category: 'SUVs', tagline: 'The ultimate flagship SUV.', price_from: 4900000, image_url: '/images/vehicles/PATROL.jpg', brochure_url: `${CDN_BROCHURES}/patrol_brochure.pdf`, show_in_menu: 1, show_in_brochures: 1 },
+  { id: 4, name: 'Almera', category: 'Cars', tagline: 'Bold, efficient, and turbocharged.', price_from: 768000, image_url: '/images/vehicles/almera.png', brochure_url: `${CDN_BROCHURES}/almera_brochure.pdf`, show_in_menu: 1, show_in_brochures: 1 },
+  { id: 5, name: 'Terra', category: 'SUVs', tagline: 'Adventure, redefined.', price_from: 1779000, image_url: '/images/vehicles/Terra.jpg', brochure_url: `${CDN_BROCHURES}/terra_brochure.pdf`, show_in_menu: 1, show_in_brochures: 1 },
+  { id: 6, name: 'Navara', category: 'Vans & Trucks', tagline: 'Built to dominate every terrain.', price_from: 1199000, image_url: '/images/vehicles/Navara.png', brochure_url: `${CDN_BROCHURES}/navara_brochure.pdf`, show_in_menu: 1, show_in_brochures: 1 },
+  { id: 7, name: 'Livina', category: 'Cars', tagline: 'Seven seats. Endless possibilities.', price_from: 1029000, image_url: '/images/vehicles/Livina.png', brochure_url: `${CDN_BROCHURES}/livina_brochure.pdf`, show_in_menu: 1, show_in_brochures: 1 },
 ];
 
 const FALLBACK_SLIDES: Slide[] = [
@@ -73,12 +79,41 @@ export async function getSocials(): Promise<Social[]> {
   }
 }
 
+function normalizeVehicle(v: any): Vehicle {
+  return {
+    ...v,
+    price_from: Number(v.price_from),
+    brochure_url: v.brochure_url ?? '',
+    show_in_menu: Number(v.show_in_menu),
+    show_in_brochures: Number(v.show_in_brochures),
+  };
+}
+
+// All vehicles, normalized. Runs the idempotent column migration first so the
+// brochure_url / show_* columns exist on databases created before this feature.
+async function fetchAllVehicles(): Promise<Vehicle[]> {
+  await ensureEntity('vehicles');
+  const rows = await query<any>(
+    'SELECT id, name, category, tagline, price_from, image_url, brochure_url, show_in_menu, show_in_brochures FROM vehicles ORDER BY sort_order ASC, id ASC',
+  );
+  return rows.length ? rows.map(normalizeVehicle) : FALLBACK_VEHICLES;
+}
+
+// Shown on the homepage and the "Our Vehicles" menu/listing.
 export async function getVehicles(): Promise<Vehicle[]> {
   try {
-    const rows = await query<Vehicle>('SELECT id, name, category, tagline, price_from, image_url FROM vehicles ORDER BY sort_order ASC');
-    return rows.length ? rows.map((v) => ({ ...v, price_from: Number(v.price_from) })) : FALLBACK_VEHICLES;
+    return (await fetchAllVehicles()).filter((v) => v.show_in_menu);
   } catch {
-    return FALLBACK_VEHICLES;
+    return FALLBACK_VEHICLES.filter((v) => v.show_in_menu);
+  }
+}
+
+// Shown on the Download Brochure page.
+export async function getBrochureVehicles(): Promise<Vehicle[]> {
+  try {
+    return (await fetchAllVehicles()).filter((v) => v.show_in_brochures);
+  } catch {
+    return FALLBACK_VEHICLES.filter((v) => v.show_in_brochures);
   }
 }
 

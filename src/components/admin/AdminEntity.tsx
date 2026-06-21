@@ -10,7 +10,8 @@ type Row = Record<string, unknown>;
 const PAGE_SIZE = 10;
 
 function emptyForm(fields: Field[]): Record<string, string> {
-  return Object.fromEntries(fields.map((f) => [f.name, '']));
+  // New records default toggles to on ('1') so vehicles are visible unless hidden.
+  return Object.fromEntries(fields.map((f) => [f.name, f.type === 'toggle' ? '1' : '']));
 }
 
 export default function AdminEntity({
@@ -186,6 +187,14 @@ export default function AdminEntity({
                   <td key={f.name} className="max-w-[220px] truncate px-3 py-2">
                     {f.type === 'password' ? (
                       '••••••••'
+                    ) : f.type === 'toggle' ? (
+                      <span
+                        className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          Number(row[f.name]) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-nissan-gray'
+                        }`}
+                      >
+                        {Number(row[f.name]) ? 'Yes' : 'No'}
+                      </span>
                     ) : f.name === 'image_url' && row[f.name] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={String(row[f.name])} alt="" className="h-10 w-16 object-contain" />
@@ -303,6 +312,18 @@ export default function AdminEntity({
                         />
                       )}
                     </div>
+                  ) : f.type === 'toggle' ? (
+                    <label className="inline-flex cursor-pointer items-center gap-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={form[f.name] === '1'}
+                        onChange={(e) => setForm({ ...form, [f.name]: e.target.checked ? '1' : '0' })}
+                        className="h-4 w-4 accent-nissan-red"
+                      />
+                      <span className="text-sm text-nissan-gray">
+                        {form[f.name] === '1' ? 'Yes — visible' : 'No — hidden'}
+                      </span>
+                    </label>
                   ) : f.type === 'select' ? (
                     <select
                       value={form[f.name]}

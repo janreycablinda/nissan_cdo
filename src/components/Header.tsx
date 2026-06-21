@@ -9,7 +9,7 @@ const NAV: { label: string; href?: string; vehicles?: boolean }[] = [
   { label: 'Services', href: '/#offers' },
   { label: 'Finance', href: '/#offers' },
   { label: 'Nissan Brand', href: '/#offers' },
-  { label: 'Resources', href: '/#offers' },
+  { label: 'Resources', href: '/vehicles/brochures' },
 ];
 
 export default function Header() {
