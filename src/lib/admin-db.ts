@@ -106,6 +106,8 @@ export async function listRows(entity: string) {
   await ensureTable(c);
   // Never read password hashes out to the client.
   const cols = c.fields.filter((f) => f.type !== 'password').map((f) => `\`${f.name}\``);
+  // Read-tracking column isn't a form field but the list view needs it.
+  if (c.readColumn) cols.push(`\`${c.readColumn}\``);
   const select = ['`id`', ...cols].join(', ');
   const hasSort = c.fields.some((f) => f.name === 'sort_order');
   const order = c.defaultOrder ?? (hasSort ? '`sort_order` ASC, `id` ASC' : '`id` ASC');
@@ -138,4 +140,31 @@ export async function deleteRow(entity: string, id: string | number) {
   const c = cfg(entity);
   await ensureTable(c);
   await query(`DELETE FROM \`${c.table}\` WHERE \`id\`=?`, [Number(id)]);
+}
+
+// Flip the read/unread flag for a single row. Only valid for entities that
+// declare a readColumn; updates that one column without touching other fields.
+export async function setReadState(entity: string, id: string | number, isRead: boolean) {
+  const c = cfg(entity);
+  if (!c.readColumn) throw new Error('This record type does not support read tracking.');
+  await ensureTable(c);
+  await query(
+    `UPDATE \`${c.table}\` SET \`${c.readColumn}\`=? WHERE \`id\`=?`,
+    [isRead ? 1 : 0, Number(id)],
+  );
+}
+
+// Count of unread rows for an entity, or 0 if it has no readColumn.
+export async function unreadCount(entity: string): Promise<number> {
+  const c = cfg(entity);
+  if (!c.readColumn) return 0;
+  try {
+    await ensureTable(c);
+    const rows = await query<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM \`${c.table}\` WHERE \`${c.readColumn}\`=0`,
+    );
+    return Number(rows[0]?.n ?? 0);
+  } catch {
+    return 0;
+  }
 }

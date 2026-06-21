@@ -87,13 +87,30 @@ export default function AdminEntity({
   label,
   fields,
   rows,
+  readColumn,
+  allowClone = true,
+  readOnly = false,
 }: {
   entityKey: string;
   label: string;
   fields: Field[];
   rows: Row[];
+  readColumn?: string;
+  allowClone?: boolean;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
+  const isUnread = (row: Row) => !!readColumn && Number(row[readColumn]) === 0;
+  const unreadTotal = readColumn ? rows.filter(isUnread).length : 0;
+
+  async function markRead(id: number, isRead: boolean) {
+    await fetch(`/api/admin/${entityKey}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_read: isRead }),
+    });
+    router.refresh();
+  }
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [cloneFromId, setCloneFromId] = useState<number | null>(null);
@@ -142,6 +159,8 @@ export default function AdminEntity({
     setCloneFromId(null);
     setError('');
     setOpen(true);
+    // Viewing a record marks it read.
+    if (isUnread(row)) markRead(Number(row.id), true);
   }
 
   // Open the form pre-filled with an existing row's values, but with no id —
@@ -207,14 +226,23 @@ export default function AdminEntity({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{label}</h1>
-          <p className="mt-1 text-sm text-nissan-gray">{rows.length} record(s)</p>
+          <p className="mt-1 text-sm text-nissan-gray">
+            {rows.length} record(s)
+            {readColumn && unreadTotal > 0 && (
+              <span className="ml-2 inline-block rounded-full bg-nissan-red px-2 py-0.5 text-[11px] font-bold text-white">
+                {unreadTotal} unread
+              </span>
+            )}
+          </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="bg-nissan-red px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-red-700"
-        >
-          + Add New
-        </button>
+        {!readOnly && (
+          <button
+            onClick={openAdd}
+            className="bg-nissan-red px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-red-700"
+          >
+            + Add New
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -248,9 +276,24 @@ export default function AdminEntity({
                 </td>
               </tr>
             )}
-            {pageRows.map((row) => (
-              <tr key={String(row.id)} className="border-b border-gray-100 align-top hover:bg-gray-50">
-                <td className="px-3 py-2 text-nissan-gray">{String(row.id)}</td>
+            {pageRows.map((row) => {
+              const unread = isUnread(row);
+              return (
+              <tr
+                key={String(row.id)}
+                className={`border-b border-gray-100 align-top hover:bg-gray-50 ${
+                  unread ? 'bg-red-50/40 font-semibold text-nissan-dark' : ''
+                }`}
+              >
+                <td className="px-3 py-2 text-nissan-gray">
+                  {unread && (
+                    <span
+                      className="mr-1.5 inline-block h-2 w-2 rounded-full bg-nissan-red align-middle"
+                      aria-label="Unread"
+                    />
+                  )}
+                  {String(row.id)}
+                </td>
                 {fields.map((f) => (
                   <td key={f.name} className="max-w-[220px] truncate px-3 py-2">
                     {f.type === 'password' ? (
@@ -277,19 +320,35 @@ export default function AdminEntity({
                 ))}
                 <td className="whitespace-nowrap px-3 py-2 text-right">
                   <button onClick={() => openEdit(row)} className="text-xs font-semibold uppercase tracking-wide text-nissan-dark hover:text-nissan-red">
-                    Edit
+                    {readColumn ? 'View' : 'Edit'}
                   </button>
-                  <span className="px-2 text-gray-300">|</span>
-                  <button onClick={() => openClone(row)} className="text-xs font-semibold uppercase tracking-wide text-nissan-dark hover:text-nissan-red">
-                    Clone
-                  </button>
+                  {readColumn && (
+                    <>
+                      <span className="px-2 text-gray-300">|</span>
+                      <button
+                        onClick={() => markRead(Number(row.id), unread)}
+                        className="text-xs font-semibold uppercase tracking-wide text-nissan-dark hover:text-nissan-red"
+                      >
+                        {unread ? 'Mark Read' : 'Mark Unread'}
+                      </button>
+                    </>
+                  )}
+                  {allowClone && (
+                    <>
+                      <span className="px-2 text-gray-300">|</span>
+                      <button onClick={() => openClone(row)} className="text-xs font-semibold uppercase tracking-wide text-nissan-dark hover:text-nissan-red">
+                        Duplicate
+                      </button>
+                    </>
+                  )}
                   <span className="px-2 text-gray-300">|</span>
                   <button onClick={() => remove(row)} className="text-xs font-semibold uppercase tracking-wide text-nissan-red hover:underline">
                     Delete
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -335,11 +394,13 @@ export default function AdminEntity({
           >
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-nissan-red">
-                {editingId
-                  ? `Edit ${label} #${editingId}`
-                  : cloneFromId
-                    ? `Clone ${label} (from #${cloneFromId})`
-                    : `Add New ${label}`}
+                {readOnly
+                  ? `View ${label} #${editingId}`
+                  : editingId
+                    ? `Edit ${label} #${editingId}`
+                    : cloneFromId
+                      ? `Duplicate ${label} (from #${cloneFromId})`
+                      : `Add New ${label}`}
               </h2>
               <button
                 onClick={close}
@@ -350,6 +411,43 @@ export default function AdminEntity({
               </button>
             </div>
 
+            {readOnly ? (
+              <div className="p-6">
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  {fields
+                    .filter((f) => f.type !== 'password')
+                    .map((f) => (
+                      <div key={f.name} className={f.type === 'textarea' ? 'sm:col-span-2' : ''}>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-nissan-gray">
+                          {f.label}
+                        </dt>
+                        <dd
+                          className={`mt-1 text-sm text-nissan-dark ${
+                            f.type === 'textarea' ? 'whitespace-pre-wrap' : ''
+                          }`}
+                        >
+                          {f.type === 'toggle'
+                            ? Number(form[f.name])
+                              ? 'Yes'
+                              : 'No'
+                            : form[f.name]?.trim()
+                              ? form[f.name]
+                              : '—'}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+                <div className="mt-6 flex items-center justify-end border-t border-gray-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={close}
+                    className="bg-nissan-dark px-6 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-nissan-red"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={save} className="grid gap-4 p-6 sm:grid-cols-2">
               {fields.map((f) => (
                 <div key={f.name} className={f.type === 'textarea' || f.type === 'variants' ? 'sm:col-span-2' : ''}>
@@ -468,6 +566,7 @@ export default function AdminEntity({
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}

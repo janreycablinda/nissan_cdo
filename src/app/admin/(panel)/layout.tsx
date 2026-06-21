@@ -1,14 +1,25 @@
 import Link from 'next/link';
 import { ENTITIES } from '@/lib/admin-schema';
+import { unreadCount } from '@/lib/admin-db';
 import { currentSession } from '@/lib/auth';
 import LogoutButton from '@/components/admin/LogoutButton';
 
 export const dynamic = 'force-dynamic';
 
-export default function PanelLayout({ children }: { children: React.ReactNode }) {
+export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = currentSession();
   const isAdmin = session?.role === 'admin';
   const entities = Object.values(ENTITIES).filter((e) => !e.adminOnly || isAdmin);
+
+  // Unread counts for entities that track read/unread (e.g. Inquiries).
+  const unread: Record<string, number> = {};
+  await Promise.all(
+    entities
+      .filter((e) => e.readColumn)
+      .map(async (e) => {
+        unread[e.key] = await unreadCount(e.key);
+      }),
+  );
 
   return (
     <div className="flex min-h-screen bg-nissan-light">
@@ -30,9 +41,14 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
             <Link
               key={e.key}
               href={`/admin/${e.key}`}
-              className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-white/10 hover:text-white"
+              className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-white/10 hover:text-white"
             >
-              {e.label}
+              <span>{e.label}</span>
+              {unread[e.key] > 0 && (
+                <span className="ml-2 inline-block rounded-full bg-nissan-red px-2 py-0.5 text-[10px] font-bold text-white">
+                  {unread[e.key]}
+                </span>
+              )}
             </Link>
           ))}
           <Link

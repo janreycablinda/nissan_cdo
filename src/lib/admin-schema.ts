@@ -33,6 +33,15 @@ export type EntityConfig = {
   // Optional ORDER BY clause (column refs already backtick-quoted) used by the
   // admin list view. Defaults to sort_order/id. e.g. '`id` DESC' for newest-first.
   defaultOrder?: string;
+  // Opt this entity into read/unread tracking. Names a TINYINT(1) column
+  // (0 = unread, 1 = read) the admin UI surfaces with bold rows, a mark
+  // read/unread action, and an unread badge in the sidebar.
+  readColumn?: string;
+  // Hide the row "Duplicate" action (e.g. for submissions that shouldn't be copied).
+  disableClone?: boolean;
+  // Records can't be created or edited — the admin shows them in a read-only
+  // view (no "Add New", no editable form). Used for submissions like inquiries.
+  readOnly?: boolean;
 };
 
 export const USER_ROLES = ['admin', 'editor'] as const;
@@ -106,6 +115,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: 'inquiries',
     // Newest submissions first.
     defaultOrder: '`id` DESC',
+    readColumn: 'is_read',
+    readOnly: true,
     fields: [
       { name: 'salutation', label: 'Salutation', type: 'text' },
       { name: 'full_name', label: 'Name', type: 'text', required: true },
@@ -129,6 +140,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       )`,
       `ALTER TABLE inquiries ADD COLUMN salutation VARCHAR(20) NOT NULL DEFAULT ''`,
       `ALTER TABLE inquiries ADD COLUMN inquiry_type VARCHAR(60) NOT NULL DEFAULT ''`,
+      `ALTER TABLE inquiries ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0`,
     ],
   },
   socials: {

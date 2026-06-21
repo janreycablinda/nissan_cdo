@@ -19,6 +19,9 @@ export default async function EntityPage({ params }: { params: { entity: string 
       label={config.label}
       fields={config.fields}
       rows={rows}
+      readColumn={config.readColumn}
+      allowClone={!config.disableClone && !config.readOnly}
+      readOnly={!!config.readOnly}
     />
   );
 }

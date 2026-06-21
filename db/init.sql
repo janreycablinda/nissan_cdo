@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS inquiries (
   inquiry_type  VARCHAR(60)  NOT NULL DEFAULT '',
   vehicle       VARCHAR(120),
   message       TEXT,
+  is_read       TINYINT(1)   NOT NULL DEFAULT 0,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
