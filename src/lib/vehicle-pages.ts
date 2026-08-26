@@ -2,13 +2,14 @@
 // Kept separate from data.ts so client components can import vehicleHref
 // without pulling in server-only DB code (mysql2).
 
-// Vehicles that have a dedicated detail page, keyed by lowercased name.
-// Add an entry here when a new vehicle page is created under /vehicles/<slug>.
-const VEHICLE_PAGES: Record<string, string> = {
-  almera: '/vehicles/almera',
-};
+import { slugify } from './vehicle-content';
 
-// Returns the detail-page path for a vehicle if one exists, otherwise null.
-export function vehicleHref(vehicle: { name: string }): string | null {
-  return VEHICLE_PAGES[vehicle.name.trim().toLowerCase()] ?? null;
+type Linkable = { name: string; slug?: string; show_page?: number };
+
+// Every vehicle gets a page at /vehicles/<slug>. Editors can unpublish one by
+// switching off "Show Detail Page" in /admin, which nulls the link here too.
+export function vehicleHref(vehicle: Linkable): string | null {
+  if (vehicle.show_page != null && !Number(vehicle.show_page)) return null;
+  const slug = (vehicle.slug || '').trim() || slugify(vehicle.name);
+  return slug ? `/vehicles/${slug}` : null;
 }

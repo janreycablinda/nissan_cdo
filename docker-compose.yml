@@ -48,6 +48,12 @@ services:
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-nissan123}
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      # Gmail SMTP for forwarding inquiries. Unset means the site still saves
+      # inquiries to the DB and just skips the email.
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL: ${EMAIL:-}
+      APP_PASSWORD: ${APP_PASSWORD:-}
     ports:
       # Localhost only — Nginx on the host reverse-proxies 443 → this.
       - "127.0.0.1:3000:3000"

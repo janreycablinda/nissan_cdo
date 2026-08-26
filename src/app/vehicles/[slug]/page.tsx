@@ -1,89 +1,69 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SectionHeading from '@/components/SectionHeading';
+import { getVehicleBySlug } from '@/lib/data';
+import { resolveContent } from '@/lib/vehicle-content';
 
-export const metadata: Metadata = {
-  title: 'Nissan Almera | Nissan Cagayan de Oro',
-  description:
-    'Discover the Nissan Almera — turbocharged performance, NissanConnect Services, and Nissan Intelligent Mobility in a refined, spacious sedan.',
-};
+// Content is edited in /admin and read at request time, so never cache.
+export const dynamic = 'force-dynamic';
 
-// Local image is /images/vehicles/almera.png. The section visuals below use
-// Unsplash placeholders (same convention as the homepage components) — swap
-// these for the official Almera assets when available.
-const FEATURES: {
-  label: string;
-  title: string[];
-  body: string;
-  image: string;
-}[] = [
-  {
-    label: 'NissanConnect Services',
-    title: ['Exciting Mobility', 'Through Connectivity'],
-    body: 'Stay connected to your Almera like never before with NissanConnect Services — a first in the subcompact sedan category. Control many of your vehicle’s features with just a tap, receive maintenance alerts, and get immediate assistance in case of an emergency.',
-    image:
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1280&q=70',
-  },
-  {
-    label: 'Nissan Intelligent Mobility',
-    title: ['Innovative Technology'],
-    body: 'Nissan Intelligent Mobility includes a suite of innovative features that give you a more confident drive and help you maneuver with greater safety.',
-    image:
-      'https://images.unsplash.com/photo-1552960562-daf630e9278b?auto=format&fit=crop&w=1280&q=70',
-  },
-  {
-    label: 'Performance',
-    title: ['Turbocharged', 'Performance'],
-    body: 'The Nissan Almera’s powerful 1.0L-litre turbocharged engine lets you enjoy thrilling performance without sacrificing fuel efficiency.',
-    image:
-      'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1280&q=70',
-  },
-  {
-    label: 'Design',
-    title: ['Generosity Beyond', 'Space'],
-    body: 'From a sleek dashboard design to a black leather interior with quilted stitching, plus comfortable amenities, you’ll find the Almera comfortable on every journey, with comfort and control at an upgrade.',
-    image:
-      'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=1280&q=70',
-  },
-  {
-    label: 'Features',
-    title: ['Have a Safer and More', 'Confident Drive'],
-    body: 'You’re bound to keep all eyes on the road. But with class-leading and engineered-with-class-leading safety technology, you and your passengers are kept secure on every journey.',
-    image:
-      'https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=1280&q=70',
-  },
-];
+type Props = { params: { slug: string } };
 
-const ACTIONS = [
-  { label: 'Download a Brochure', href: '/#offers' },
-  { label: 'Book a Test Drive', href: '/#offers' },
-  { label: 'Request a Quote', href: '/#offers' },
-  { label: 'Visit Price Guide Page', href: '/#offers' },
-];
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const vehicle = await getVehicleBySlug(params.slug);
+  if (!vehicle) return { title: 'Vehicle Not Found | Nissan Cagayan de Oro' };
 
-export default function AlmeraPage() {
+  const c = resolveContent(vehicle);
+  return {
+    title: `Nissan ${vehicle.name} | Nissan Cagayan de Oro`,
+    description: vehicle.tagline || c.introBody.slice(0, 160),
+  };
+}
+
+export default async function VehiclePage({ params }: Props) {
+  const vehicle = await getVehicleBySlug(params.slug);
+  if (!vehicle) notFound();
+
+  const c = resolveContent(vehicle);
+
+  const actions = [
+    {
+      label: 'Download a Brochure',
+      href: vehicle.brochure_url || '/vehicles/brochures',
+    },
+    { label: 'Book a Test Drive', href: '/#contact' },
+    { label: 'Request a Quote', href: '/#contact' },
+    { label: 'Visit Price Guide Page', href: '/vehicles/new/price-guide' },
+  ];
+
   return (
     <main>
       <Header />
 
       {/* Hero */}
       <section className="relative h-[78vh] min-h-[460px] w-full overflow-hidden bg-nissan-dark">
+        {/* Both fit classes are written out literally so Tailwind's JIT keeps them. */}
         <div
-          className="absolute inset-0 bg-contain bg-center bg-no-repeat opacity-90"
-          style={{ backgroundImage: "url('/images/vehicles/almera.png')" }}
+          className={`absolute inset-0 bg-center bg-no-repeat opacity-90 ${
+            c.heroFit === 'cover' ? 'bg-cover' : 'bg-contain'
+          }`}
+          style={{ backgroundImage: `url('${c.heroImage}')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40" />
         <div className="container-x relative flex h-full flex-col justify-end pb-16 text-white">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-300">
-            Engineered for Excitement
+            {c.heroKicker}
           </p>
           <h1 className="text-4xl font-light uppercase leading-[1.05] tracking-wide sm:text-6xl">
-            The Nissan Almera
+            {c.heroTitle}
           </h1>
-          <p className="mt-3 text-sm uppercase tracking-[0.2em] text-gray-200">
-            with Nissan<span className="font-semibold text-nissan-red">Connect</span> | Services
-          </p>
+          {c.heroSubtitle && (
+            <p className="mt-3 text-sm uppercase tracking-[0.2em] text-gray-200">
+              {c.heroSubtitle}
+            </p>
+          )}
         </div>
       </section>
 
@@ -92,22 +72,18 @@ export default function AlmeraPage() {
         <div className="container-x grid gap-8 md:grid-cols-2">
           <div>
             <h2 className="relative inline-block pb-3 text-2xl font-light uppercase tracking-wide sm:text-[28px]">
-              Engineered for Excitement
+              {c.introHeading}
               <span className="absolute bottom-0 left-0 h-[3px] w-10 bg-nissan-red" />
             </h2>
           </div>
-          <p className="text-sm leading-relaxed text-gray-300">
-            The all-new Almera embodies excitement inside and out with its sleek front and rear
-            fascia, array of Nissan Intelligent Mobility features, and the latest innovation,
-            NissanConnect Services, that lets you stay connected to your Almera wherever, whenever.
-          </p>
+          <p className="text-sm leading-relaxed text-gray-300">{c.introBody}</p>
         </div>
       </section>
 
       {/* Feature sections */}
-      {FEATURES.map((f) => (
+      {c.features.map((f, i) => (
         <section
-          key={f.label}
+          key={`${f.label}-${i}`}
           className="relative flex min-h-[460px] items-center overflow-hidden bg-nissan-dark py-16 text-white"
         >
           <div
@@ -124,8 +100,9 @@ export default function AlmeraPage() {
           <div className="container-x relative">
             <div className="max-w-xl pl-10 sm:pl-12">
               <h2 className="text-3xl font-light uppercase leading-tight tracking-wide sm:text-4xl">
-                {f.title.map((line, i) => (
-                  <span key={i} className="block">
+                {/* Each newline in the admin field becomes a rendered line break. */}
+                {f.title.split('\n').map((line, li) => (
+                  <span key={li} className="block">
                     {line}
                   </span>
                 ))}
@@ -135,7 +112,7 @@ export default function AlmeraPage() {
                 <a href="/#offers" className="btn-outline">
                   Read More
                 </a>
-                <a href="/#offers" className="btn-outline">
+                <a href="/#contact" className="btn-outline">
                   Book a Test Drive
                 </a>
               </div>
@@ -148,11 +125,9 @@ export default function AlmeraPage() {
       <section className="bg-white py-16">
         <div className="container-x grid items-center gap-10 md:grid-cols-2">
           <div>
-            <SectionHeading>Nissan Genuine Accessories</SectionHeading>
+            <SectionHeading>{c.accessoriesHeading}</SectionHeading>
             <p className="mt-6 max-w-md text-sm leading-relaxed text-nissan-gray">
-              Care to break away from the norm with the style that matches your Almera’s
-              modern and top-grade features. Enhance your vehicle and explore your
-              preference with Nissan Genuine Accessories.
+              {c.accessoriesBody}
             </p>
             <a href="/#offers" className="btn-primary mt-7">
               Read More
@@ -162,19 +137,13 @@ export default function AlmeraPage() {
             <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
               <div
                 className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=900&q=70')",
-                }}
+                style={{ backgroundImage: `url('${c.accessoriesImage}')` }}
               />
             </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-nissan-dark">
-              Side Door Visor
+              {c.accessoriesCaption}
             </p>
-            <p className="mt-1 text-xs text-nissan-gray">
-              Cuts air to stay out of the way while keeping the rain and dirt off your windows
-              when slightly open.
-            </p>
+            <p className="mt-1 text-xs text-nissan-gray">{c.accessoriesNote}</p>
           </div>
         </div>
       </section>
@@ -187,11 +156,10 @@ export default function AlmeraPage() {
               Warranty
             </p>
             <h2 className="mt-3 text-2xl font-light uppercase tracking-wide text-nissan-dark sm:text-3xl">
-              5-Year Warranty or 150,000km Warranty
+              {c.warrantyHeading}
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-nissan-gray">
-              Be protected from unexpected repair costs with the Nissan Almera’s 5-Year or
-              150,000km warranty.
+              {c.warrantyBody}
             </p>
             <a href="/#offers" className="btn-primary mt-7">
               Read More
@@ -200,7 +168,7 @@ export default function AlmeraPage() {
           <div className="flex items-center justify-center md:justify-end">
             <div className="text-nissan-dark">
               <span className="text-7xl font-extrabold leading-none tracking-tighter sm:text-8xl">
-                5
+                {c.warrantyYears}
               </span>
               <span className="ml-1 align-top text-4xl font-extrabold uppercase sm:text-5xl">
                 Year
@@ -208,9 +176,11 @@ export default function AlmeraPage() {
               <p className="mt-1 text-sm font-bold uppercase tracking-wide text-nissan-red">
                 Nissan Warranty
               </p>
-              <p className="text-[11px] uppercase tracking-wide text-nissan-gray">
-                For VL variant only.
-              </p>
+              {c.warrantyNote && (
+                <p className="text-[11px] uppercase tracking-wide text-nissan-gray">
+                  {c.warrantyNote}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -223,7 +193,7 @@ export default function AlmeraPage() {
             What Would You Like to Do?
           </h2>
           <div className="mt-10 grid grid-cols-2 gap-8 lg:grid-cols-4">
-            {ACTIONS.map((a) => (
+            {actions.map((a) => (
               <a
                 key={a.label}
                 href={a.href}

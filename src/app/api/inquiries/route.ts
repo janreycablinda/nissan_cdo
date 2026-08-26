@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { ensureEntity } from '@/lib/admin-db';
+import { sendInquiryNotification } from '@/lib/mailer';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +85,23 @@ export async function POST(req: Request) {
       'INSERT INTO inquiries (salutation, full_name, email, phone, inquiry_type, vehicle, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [salutation, full_name, email, phone, inquiry_type, vehicle, message],
     );
+
+    // Forward to the sales inbox. Deliberately after the INSERT and awaited but
+    // non-throwing: the submission is already safe in the database, so a mail
+    // outage must never surface as an error to the customer. Failures are
+    // logged for the operator and the inquiry is still visible in /admin.
+    const mail = await sendInquiryNotification({
+      salutation,
+      full_name,
+      email,
+      phone,
+      inquiry_type,
+      vehicle,
+      message,
+    });
+    if (!mail.sent) {
+      console.warn('inquiry saved but email not sent:', mail.reason);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

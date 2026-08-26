@@ -73,6 +73,25 @@ function coerce(field: Field, raw: unknown) {
       .filter((v) => v.name !== '');
     return JSON.stringify(clean);
   }
+  if (field.type === 'features') {
+    // Form sends a JSON string of [{label, title, body, image}]. Drop rows with
+    // no label (the section's only required part) and re-stringify for storage.
+    let parsed: unknown = [];
+    try {
+      parsed = JSON.parse(typeof raw === 'string' && raw ? raw : '[]');
+    } catch {
+      parsed = [];
+    }
+    const clean = (Array.isArray(parsed) ? parsed : [])
+      .map((f) => ({
+        label: String((f as any)?.label ?? '').trim(),
+        title: String((f as any)?.title ?? '').trim(),
+        body: String((f as any)?.body ?? '').trim(),
+        image: String((f as any)?.image ?? '').trim(),
+      }))
+      .filter((f) => f.label !== '');
+    return JSON.stringify(clean);
+  }
   if (field.type === 'number') {
     if (raw === '' || raw == null) return null;
     return Number(raw);
@@ -118,9 +137,12 @@ export async function createRow(entity: string, body: Record<string, unknown>) {
   const c = cfg(entity);
   await ensureTable(c);
   validate(c.fields, body);
-  const cols = c.fields.map((f) => `\`${f.name}\``).join(', ');
-  const placeholders = c.fields.map(() => '?').join(', ');
-  const vals = c.fields.map((f) => coerce(f, body[f.name]));
+  // datetime columns are DB-managed (DEFAULT CURRENT_TIMESTAMP) — writing them
+  // from the form would overwrite the real timestamp with a blank.
+  const writable = c.fields.filter((f) => f.type !== 'datetime');
+  const cols = writable.map((f) => `\`${f.name}\``).join(', ');
+  const placeholders = writable.map(() => '?').join(', ');
+  const vals = writable.map((f) => coerce(f, body[f.name]));
   await run(`INSERT INTO \`${c.table}\` (${cols}) VALUES (${placeholders})`, vals);
 }
 
@@ -128,7 +150,9 @@ export async function updateRow(entity: string, id: string | number, body: Recor
   const c = cfg(entity);
   await ensureTable(c);
   // A blank password on edit means "keep the current one" — drop it from the update.
-  const fields = c.fields.filter((f) => !(f.type === 'password' && isBlank(body[f.name])));
+  const fields = c.fields.filter(
+    (f) => f.type !== 'datetime' && !(f.type === 'password' && isBlank(body[f.name])),
+  );
   validate(fields, body);
   const sets = fields.map((f) => `\`${f.name}\`=?`).join(', ');
   const vals = fields.map((f) => coerce(f, body[f.name]));

@@ -13,7 +13,30 @@ CREATE TABLE IF NOT EXISTS vehicles (
   show_in_menu      TINYINT(1) NOT NULL DEFAULT 1,
   show_in_brochures TINYINT(1) NOT NULL DEFAULT 1,
   sort_order        INT NOT NULL DEFAULT 0,
-  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  -- Detail page (/vehicles/<slug>). All content columns are optional: blanks
+  -- fall back to shared copy in src/lib/vehicle-content.ts, so a vehicle gets a
+  -- complete page as soon as it has a slug.
+  slug                VARCHAR(140) NOT NULL DEFAULT '',
+  show_page           TINYINT(1) NOT NULL DEFAULT 1,
+  -- Wide banner for the detail hero; image_url above is the lineup cut-out.
+  hero_image          VARCHAR(255) NOT NULL DEFAULT '',
+  hero_kicker         VARCHAR(200) NOT NULL DEFAULT '',
+  hero_title          VARCHAR(200) NOT NULL DEFAULT '',
+  hero_subtitle       VARCHAR(200) NOT NULL DEFAULT '',
+  intro_heading       VARCHAR(200) NOT NULL DEFAULT '',
+  intro_body          TEXT,
+  features            TEXT,
+  accessories_heading VARCHAR(200) NOT NULL DEFAULT '',
+  accessories_body    TEXT,
+  accessories_image   VARCHAR(255) NOT NULL DEFAULT '',
+  accessories_caption VARCHAR(200) NOT NULL DEFAULT '',
+  accessories_note    TEXT,
+  warranty_years      INT NULL,
+  warranty_heading    VARCHAR(200) NOT NULL DEFAULT '',
+  warranty_body       TEXT,
+  warranty_note       VARCHAR(200) NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS slides (
@@ -100,3 +123,18 @@ INSERT INTO socials (platform, url, sort_order) VALUES
   ('Facebook',  'https://facebook.com/nissancdo', 1),
   ('Instagram', '#',                              2),
   ('YouTube',   '#',                              3);
+
+-- Where inquiry notification emails are routed. Single row (id = 1); SMTP
+-- credentials themselves live in .env, never in the database.
+CREATE TABLE IF NOT EXISTS email_settings (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  enabled        TINYINT(1)   NOT NULL DEFAULT 1,
+  recipient      VARCHAR(255) NOT NULL DEFAULT '',
+  cc             VARCHAR(255) NOT NULL DEFAULT '',
+  subject_prefix VARCHAR(80)  NOT NULL DEFAULT '[Nissan CDO]',
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO email_settings (id, enabled, recipient, subject_prefix)
+  VALUES (1, 1, '', '[Nissan CDO]')
+  ON DUPLICATE KEY UPDATE id = id;

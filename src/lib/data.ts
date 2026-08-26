@@ -1,5 +1,6 @@
 import { query } from './db';
 import { ensureEntity } from './admin-db';
+import { slugify } from './vehicle-content';
 
 export type Variant = {
   name: string;
@@ -17,6 +18,27 @@ export type Vehicle = {
   variants: Variant[];
   show_in_menu: number; // 1 = shown on menu & homepage
   show_in_brochures: number; // 1 = shown on the brochure page
+  slug: string; // URL key for /vehicles/<slug>
+  show_page: number; // 1 = the detail page is published
+
+  // Detail-page content. All optional in the DB — resolveContent() in
+  // vehicle-content.ts supplies fallback copy for anything left blank.
+  hero_image?: string;
+  hero_kicker?: string;
+  hero_title?: string;
+  hero_subtitle?: string;
+  intro_heading?: string;
+  intro_body?: string;
+  features?: string;
+  accessories_heading?: string;
+  accessories_body?: string;
+  accessories_image?: string;
+  accessories_caption?: string;
+  accessories_note?: string;
+  warranty_years?: number | null;
+  warranty_heading?: string;
+  warranty_body?: string;
+  warranty_note?: string;
 };
 
 export type Slide = {
@@ -46,7 +68,9 @@ export type Social = {
 // (e.g. running `next dev` before `docker compose up`).
 const CDN_BROCHURES = 'https://www-asia.nissan-cdn.net/content/dam/Nissan/ph/brochures';
 
-const FALLBACK_VEHICLES: Vehicle[] = [
+// slug/show_page are derived rather than written out per row, so the fallback
+// list stays a single source of truth and can't drift from slugify().
+const FALLBACK_VEHICLES: Vehicle[] = ([
   { id: 1, name: 'Kicks e-POWER', category: 'SUVs', tagline: 'Electric drive. No charging needed.', price_from: 1179000, image_url: '/images/vehicles/Kicks.png', brochure_url: `${CDN_BROCHURES}/kicks_brochure.pdf`, variants: [{ name: 'EL', price: 1179000 }, { name: 'VE', price: 1329000 }, { name: 'VL', price: 1479000 }], show_in_menu: 1, show_in_brochures: 1 },
   { id: 2, name: 'Urvan', category: 'Vans & Trucks', tagline: 'Move more. Do more.', price_from: 1280000, image_url: '/images/vehicles/URVAN.jpg', brochure_url: '', variants: [{ name: 'Standard 15-Seater', price: 1280000 }, { name: 'Premium', price: 1650000 }, { name: 'Premium S', price: 2165000 }], show_in_menu: 1, show_in_brochures: 1 },
   { id: 3, name: 'Patrol', category: 'SUVs', tagline: 'The ultimate flagship SUV.', price_from: 5335000, image_url: '/images/vehicles/PATROL.jpg', brochure_url: `${CDN_BROCHURES}/patrol_brochure.pdf`, variants: [{ name: 'Royale', price: 5335000 }, { name: 'Premium', price: 5385000 }], show_in_menu: 1, show_in_brochures: 1 },
@@ -54,7 +78,11 @@ const FALLBACK_VEHICLES: Vehicle[] = [
   { id: 5, name: 'Terra', category: 'SUVs', tagline: 'Adventure, redefined.', price_from: 1969000, image_url: '/images/vehicles/Terra.jpg', brochure_url: `${CDN_BROCHURES}/terra_brochure.pdf`, variants: [{ name: 'EL 4x2 AT', price: 1969000 }, { name: 'VE 4x2 AT', price: 2189000 }, { name: 'VL 4x4 AT', price: 2469000 }], show_in_menu: 1, show_in_brochures: 1 },
   { id: 6, name: 'Navara', category: 'Vans & Trucks', tagline: 'Built to dominate every terrain.', price_from: 1240000, image_url: '/images/vehicles/Navara.png', brochure_url: `${CDN_BROCHURES}/navara_brochure.pdf`, variants: [{ name: 'Calibre 4x2 MT', price: 1240000 }, { name: 'VE 4x2 AT', price: 1560000 }, { name: 'VL 4x4 AT', price: 2220000 }], show_in_menu: 1, show_in_brochures: 1 },
   { id: 7, name: 'Livina', category: 'Cars', tagline: 'Seven seats. Endless possibilities.', price_from: 1094000, image_url: '/images/vehicles/Livina.png', brochure_url: `${CDN_BROCHURES}/livina_brochure.pdf`, variants: [{ name: 'E MT', price: 1094000 }, { name: 'VE CVT', price: 1199000 }, { name: 'VL CVT', price: 1274000 }], show_in_menu: 1, show_in_brochures: 1 },
-];
+] as Omit<Vehicle, 'slug' | 'show_page'>[]).map((v) => ({
+  ...v,
+  slug: slugify(v.name),
+  show_page: 1,
+}));
 
 const FALLBACK_SLIDES: Slide[] = [
   { id: 1, kicker: 'The All-New Nissan Patrol', title_line1: 'Dare to Be', title_line2: 'Exceptional', image_url: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1920&q=75', cta_label: 'Discover More', cta_href: '#vehicles' },
@@ -106,6 +134,10 @@ function normalizeVehicle(v: any): Vehicle {
     variants: parseVariants(v.variants),
     show_in_menu: Number(v.show_in_menu),
     show_in_brochures: Number(v.show_in_brochures),
+    // Older rows predate the slug column — fall back to deriving it from the
+    // name so links keep working before the backfill migration has run.
+    slug: String(v.slug || '') || slugify(String(v.name ?? '')),
+    show_page: v.show_page == null ? 1 : Number(v.show_page),
   };
 }
 
@@ -115,9 +147,26 @@ function normalizeVehicle(v: any): Vehicle {
 async function fetchAllVehicles(): Promise<Vehicle[]> {
   await ensureEntity('vehicles');
   const rows = await query<any>(
-    'SELECT id, name, category, tagline, price_from, image_url, brochure_url, variants, show_in_menu, show_in_brochures FROM vehicles ORDER BY sort_order ASC, id ASC',
+    'SELECT id, name, category, tagline, price_from, image_url, brochure_url, variants, show_in_menu, show_in_brochures, slug, show_page FROM vehicles ORDER BY sort_order ASC, id ASC',
   );
   return rows.length ? rows.map(normalizeVehicle) : FALLBACK_VEHICLES;
+}
+
+// Detail-page lookup. Selects every column (unlike the list query above) because
+// the page renders the full set of CMS content fields.
+export async function getVehicleBySlug(slug: string): Promise<Vehicle | null> {
+  const wanted = slug.trim().toLowerCase();
+  try {
+    await ensureEntity('vehicles');
+    const rows = await query<any>('SELECT * FROM vehicles WHERE slug = ? LIMIT 1', [wanted]);
+    if (!rows.length) return null;
+    const vehicle = normalizeVehicle(rows[0]);
+    return vehicle.show_page ? vehicle : null;
+  } catch {
+    // DB unreachable — serve the static fallback so the page still renders.
+    const vehicle = FALLBACK_VEHICLES.find((v) => v.slug === wanted);
+    return vehicle && vehicle.show_page ? vehicle : null;
+  }
 }
 
 // Shown on the homepage and the "Our Vehicles" menu/listing.

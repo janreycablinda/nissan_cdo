@@ -12,7 +12,10 @@ const PAGE_SIZE = 10;
 function emptyForm(fields: Field[]): Record<string, string> {
   // New records default toggles to on ('1') so vehicles are visible unless hidden.
   return Object.fromEntries(
-    fields.map((f) => [f.name, f.type === 'toggle' ? '1' : f.type === 'variants' ? '[]' : '']),
+    fields.map((f) => [
+      f.name,
+      f.type === 'toggle' ? '1' : f.type === 'variants' || f.type === 'features' ? '[]' : '',
+    ]),
   );
 }
 
@@ -29,6 +32,165 @@ function parseVariants(raw: string): VariantRow[] {
   } catch {
     return [];
   }
+}
+
+// DB timestamps arrive as ISO strings over JSON. Formatted in the browser, so
+// each admin sees the date in their own locale and timezone. Rows are fetched
+// client-side, so there's no SSR/hydration mismatch to worry about.
+function formatDateTime(raw: unknown): string {
+  const s = String(raw ?? '').trim();
+  if (!s) return '—';
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+type FeatureRow = { label: string; title: string; body: string; image: string };
+
+function parseFeatureRows(raw: string): FeatureRow[] {
+  try {
+    const arr = JSON.parse(raw || '[]');
+    if (!Array.isArray(arr)) return [];
+    return arr.map((f) => ({
+      label: String(f?.label ?? ''),
+      title: String(f?.title ?? ''),
+      body: String(f?.body ?? ''),
+      image: String(f?.image ?? ''),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Repeatable editor for the detail page's full-bleed feature sections. Each row
+// is one section; leaving the whole list empty makes the page fall back to the
+// shared default copy in vehicle-content.ts.
+function FeaturesEditor({
+  value,
+  onChange,
+  onBrowse,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  onBrowse: (apply: (url: string) => void) => void;
+}) {
+  const rows = parseFeatureRows(value);
+  const commit = (next: FeatureRow[]) => onChange(JSON.stringify(next));
+  const update = (i: number, patch: Partial<FeatureRow>) =>
+    commit(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  const input =
+    'w-full border border-gray-300 px-3 py-2 text-sm focus:border-nissan-red focus:outline-none';
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row, i) => (
+        <div key={i} className="border border-gray-200 bg-gray-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-nissan-gray">
+              Section {i + 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={i === 0}
+                onClick={() => {
+                  const next = [...rows];
+                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                  commit(next);
+                }}
+                aria-label="Move section up"
+                className="px-2 text-sm leading-none text-nissan-gray transition hover:text-nissan-red disabled:opacity-30"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                disabled={i === rows.length - 1}
+                onClick={() => {
+                  const next = [...rows];
+                  [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                  commit(next);
+                }}
+                aria-label="Move section down"
+                className="px-2 text-sm leading-none text-nissan-gray transition hover:text-nissan-red disabled:opacity-30"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => commit(rows.filter((_, idx) => idx !== i))}
+                aria-label="Remove section"
+                className="px-2 text-lg leading-none text-nissan-gray transition hover:text-nissan-red"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input
+              type="text"
+              value={row.label}
+              placeholder="Side label (e.g. Performance)"
+              onChange={(e) => update(i, { label: e.target.value })}
+              className={input}
+            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={row.image}
+                placeholder="Background image URL"
+                onChange={(e) => update(i, { image: e.target.value })}
+                className={input}
+              />
+              <button
+                type="button"
+                onClick={() => onBrowse((url) => update(i, { image: url }))}
+                className="shrink-0 border border-gray-300 bg-white px-3 text-xs font-semibold uppercase tracking-wide text-nissan-dark transition hover:border-nissan-red hover:text-nissan-red"
+              >
+                Browse
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            value={row.title}
+            rows={2}
+            placeholder="Heading — one line per row"
+            onChange={(e) => update(i, { title: e.target.value })}
+            className={`${input} mt-2`}
+          />
+          <textarea
+            value={row.body}
+            rows={3}
+            placeholder="Body copy"
+            onChange={(e) => update(i, { body: e.target.value })}
+            className={`${input} mt-2`}
+          />
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={() => commit([...rows, { label: '', title: '', body: '', image: '' }])}
+        className="border border-gray-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-nissan-dark transition hover:border-nissan-red hover:text-nissan-red"
+      >
+        + Add Feature Section
+      </button>
+      {rows.length === 0 && (
+        <p className="text-xs text-nissan-gray">
+          No sections — the page will use the default Nissan copy.
+        </p>
+      )}
+    </div>
+  );
 }
 
 // Repeatable editor for a vehicle's variant/price list. Serialises to the JSON
@@ -120,6 +282,10 @@ export default function AdminEntity({
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pickerField, setPickerField] = useState<string | null>(null);
+  // Repeater rows (feature sections) can't be addressed by field name, so they
+  // hand the picker a setter instead. Wrapped in an object because React treats
+  // a bare function passed to setState as a lazy updater.
+  const [pickerApply, setPickerApply] = useState<{ fn: (url: string) => void } | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -302,6 +468,14 @@ export default function AdminEntity({
                       <span className="text-nissan-gray">
                         {parseVariants(String(row[f.name] ?? '')).length} variant(s)
                       </span>
+                    ) : f.type === 'features' ? (
+                      <span className="text-nissan-gray">
+                        {parseFeatureRows(String(row[f.name] ?? '')).length || 'default'} section(s)
+                      </span>
+                    ) : f.type === 'datetime' ? (
+                      <span className="whitespace-nowrap text-nissan-gray">
+                        {formatDateTime(row[f.name])}
+                      </span>
                     ) : f.type === 'toggle' ? (
                       <span
                         className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
@@ -430,9 +604,11 @@ export default function AdminEntity({
                             ? Number(form[f.name])
                               ? 'Yes'
                               : 'No'
-                            : form[f.name]?.trim()
-                              ? form[f.name]
-                              : '—'}
+                            : f.type === 'datetime'
+                              ? formatDateTime(form[f.name])
+                              : form[f.name]?.trim()
+                                ? form[f.name]
+                                : '—'}
                         </dd>
                       </div>
                     ))}
@@ -450,7 +626,14 @@ export default function AdminEntity({
             ) : (
             <form onSubmit={save} className="grid gap-4 p-6 sm:grid-cols-2">
               {fields.map((f) => (
-                <div key={f.name} className={f.type === 'textarea' || f.type === 'variants' ? 'sm:col-span-2' : ''}>
+                <div
+                  key={f.name}
+                  className={
+                    f.type === 'textarea' || f.type === 'variants' || f.type === 'features'
+                      ? 'sm:col-span-2'
+                      : ''
+                  }
+                >
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide">
                     {f.label} {f.required && <span className="text-nissan-red">*</span>}
                   </label>
@@ -487,6 +670,17 @@ export default function AdminEntity({
                       value={form[f.name]}
                       onChange={(next) => setForm({ ...form, [f.name]: next })}
                     />
+                  ) : f.type === 'features' ? (
+                    <FeaturesEditor
+                      value={form[f.name]}
+                      onChange={(next) => setForm({ ...form, [f.name]: next })}
+                      onBrowse={(apply) => setPickerApply({ fn: apply })}
+                    />
+                  ) : f.type === 'datetime' ? (
+                    // Set by the database — shown for context, never editable.
+                    <p className="px-1 py-2 text-sm text-nissan-gray">
+                      {formatDateTime(form[f.name])}
+                    </p>
                   ) : f.type === 'toggle' ? (
                     <label className="inline-flex cursor-pointer items-center gap-2 py-2">
                       <input
@@ -572,13 +766,18 @@ export default function AdminEntity({
       )}
 
       {/* Media picker (for image fields) */}
-      {pickerField && (
+      {(pickerField || pickerApply) && (
         <MediaPicker
           onSelect={(url) => {
-            setForm((prev) => ({ ...prev, [pickerField]: url }));
+            if (pickerApply) pickerApply.fn(url);
+            else if (pickerField) setForm((prev) => ({ ...prev, [pickerField]: url }));
             setPickerField(null);
+            setPickerApply(null);
           }}
-          onClose={() => setPickerField(null)}
+          onClose={() => {
+            setPickerField(null);
+            setPickerApply(null);
+          }}
         />
       )}
     </div>

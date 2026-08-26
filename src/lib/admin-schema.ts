@@ -6,7 +6,11 @@ export type FieldType =
   | 'image'
   | 'password'
   | 'toggle'
-  | 'variants';
+  | 'variants'
+  | 'features'
+  // Display-only timestamp owned by the database (e.g. created_at). Never
+  // written back by the admin — createRow/updateRow skip it.
+  | 'datetime';
 
 export type Field = {
   name: string;
@@ -91,12 +95,60 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: 'show_in_menu', label: 'Show on Menu & Homepage', type: 'toggle' },
       { name: 'show_in_brochures', label: 'Show on Brochure Page', type: 'toggle' },
       { name: 'sort_order', label: 'Sort Order', type: 'number' },
+
+      // --- Detail page (/vehicles/<slug>) --------------------------------
+      // Every field below is optional: the page falls back to sensible copy
+      // derived from the vehicle itself (see vehicle-content.ts), so a new
+      // vehicle gets a complete page the moment it's added.
+      { name: 'slug', label: 'Page URL Slug', type: 'text', required: true, placeholder: 'almera' },
+      { name: 'show_page', label: 'Show Detail Page', type: 'toggle' },
+      // Wide banner shot for the detail-page hero. Distinct from image_url,
+      // which is the transparent cut-out used in the lineup grid. Falls back to
+      // image_url when blank.
+      { name: 'hero_image', label: 'Hero — Banner Image', type: 'image', placeholder: '/images/vehicles/hero/…' },
+      { name: 'hero_kicker', label: 'Hero — Kicker', type: 'text', placeholder: 'Engineered for Excitement' },
+      { name: 'hero_title', label: 'Hero — Title', type: 'text', placeholder: 'The Nissan Almera' },
+      { name: 'hero_subtitle', label: 'Hero — Subtitle', type: 'text', placeholder: 'with NissanConnect | Services' },
+      { name: 'intro_heading', label: 'Intro — Heading', type: 'text' },
+      { name: 'intro_body', label: 'Intro — Body', type: 'textarea' },
+      { name: 'features', label: 'Feature Sections', type: 'features' },
+      { name: 'accessories_heading', label: 'Accessories — Heading', type: 'text' },
+      { name: 'accessories_body', label: 'Accessories — Body', type: 'textarea' },
+      { name: 'accessories_image', label: 'Accessories — Image', type: 'image' },
+      { name: 'accessories_caption', label: 'Accessories — Caption', type: 'text' },
+      { name: 'accessories_note', label: 'Accessories — Caption Note', type: 'textarea' },
+      { name: 'warranty_years', label: 'Warranty — Years', type: 'number', placeholder: '5' },
+      { name: 'warranty_heading', label: 'Warranty — Heading', type: 'text' },
+      { name: 'warranty_body', label: 'Warranty — Body', type: 'textarea' },
+      { name: 'warranty_note', label: 'Warranty — Fine Print', type: 'text' },
     ],
     ensure: [
       `ALTER TABLE vehicles ADD COLUMN brochure_url VARCHAR(255) NOT NULL DEFAULT ''`,
       `ALTER TABLE vehicles ADD COLUMN show_in_menu TINYINT(1) NOT NULL DEFAULT 1`,
       `ALTER TABLE vehicles ADD COLUMN show_in_brochures TINYINT(1) NOT NULL DEFAULT 1`,
       `ALTER TABLE vehicles ADD COLUMN variants TEXT`,
+      `ALTER TABLE vehicles ADD COLUMN slug VARCHAR(140) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN show_page TINYINT(1) NOT NULL DEFAULT 1`,
+      `ALTER TABLE vehicles ADD COLUMN hero_image VARCHAR(255) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN hero_kicker VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN hero_title VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN hero_subtitle VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN intro_heading VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN intro_body TEXT`,
+      `ALTER TABLE vehicles ADD COLUMN features TEXT`,
+      `ALTER TABLE vehicles ADD COLUMN accessories_heading VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN accessories_body TEXT`,
+      `ALTER TABLE vehicles ADD COLUMN accessories_image VARCHAR(255) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN accessories_caption VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN accessories_note TEXT`,
+      `ALTER TABLE vehicles ADD COLUMN warranty_years INT NULL`,
+      `ALTER TABLE vehicles ADD COLUMN warranty_heading VARCHAR(200) NOT NULL DEFAULT ''`,
+      `ALTER TABLE vehicles ADD COLUMN warranty_body TEXT`,
+      `ALTER TABLE vehicles ADD COLUMN warranty_note VARCHAR(200) NOT NULL DEFAULT ''`,
+      // Backfill slugs for rows created before the column existed. Must run
+      // BEFORE the unique index below, or the blank duplicates would collide.
+      `UPDATE vehicles SET slug = TRIM(BOTH '-' FROM LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-'))) WHERE slug = ''`,
+      `ALTER TABLE vehicles ADD UNIQUE KEY uniq_vehicles_slug (slug)`,
     ],
   },
   offers: {
@@ -125,6 +177,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: 'inquiry_type', label: 'Inquiry Type', type: 'text' },
       { name: 'vehicle', label: 'Vehicle', type: 'text' },
       { name: 'message', label: 'Message', type: 'textarea' },
+      { name: 'created_at', label: 'Date Sent', type: 'datetime' },
     ],
     ensure: [
       `CREATE TABLE IF NOT EXISTS inquiries (
@@ -141,8 +194,56 @@ export const ENTITIES: Record<string, EntityConfig> = {
       `ALTER TABLE inquiries ADD COLUMN salutation VARCHAR(20) NOT NULL DEFAULT ''`,
       `ALTER TABLE inquiries ADD COLUMN inquiry_type VARCHAR(60) NOT NULL DEFAULT ''`,
       `ALTER TABLE inquiries ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0`,
+      `ALTER TABLE inquiries ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
     ],
   },
+  // Where new inquiry notifications get emailed. A single-row entity: the app
+  // always reads row id 1, so there's no "Add New" workflow to worry about.
+  // SMTP credentials stay in .env — only the routing is editable here.
+  email_settings: {
+    key: 'email_settings',
+    label: 'Email Notifications',
+    table: 'email_settings',
+    adminOnly: true,
+    disableClone: true,
+    fields: [
+      { name: 'enabled', label: 'Forward Inquiries by Email', type: 'toggle' },
+      {
+        name: 'recipient',
+        label: 'Send Inquiries To',
+        type: 'text',
+        required: true,
+        placeholder: 'sales@nissancdo.com',
+      },
+      {
+        name: 'cc',
+        label: 'CC (optional, comma-separated)',
+        type: 'text',
+        placeholder: 'manager@nissancdo.com, service@nissancdo.com',
+      },
+      {
+        name: 'subject_prefix',
+        label: 'Subject Prefix',
+        type: 'text',
+        placeholder: '[Nissan CDO]',
+      },
+    ],
+    ensure: [
+      `CREATE TABLE IF NOT EXISTS email_settings (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        enabled        TINYINT(1)   NOT NULL DEFAULT 1,
+        recipient      VARCHAR(255) NOT NULL DEFAULT '',
+        cc             VARCHAR(255) NOT NULL DEFAULT '',
+        subject_prefix VARCHAR(80)  NOT NULL DEFAULT '[Nissan CDO]',
+        created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      // Seed the single settings row so the admin form always has one to edit.
+      `INSERT INTO email_settings (id, enabled, recipient, subject_prefix)
+         SELECT 1, 1, '', '[Nissan CDO]'
+         WHERE NOT EXISTS (SELECT 1 FROM email_settings WHERE id = 1)`,
+    ],
+  },
+
   socials: {
     key: 'socials',
     label: 'Social Media',
