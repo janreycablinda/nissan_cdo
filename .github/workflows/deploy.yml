@@ -28,6 +28,10 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script_stop: true # abort on the first failing command
+          # Default is 10m, which the droplet blows past whenever a dependency
+          # change invalidates the Docker deps layer: a cold `npm ci` alone runs
+          # ~6min there, before `next build` even starts.
+          command_timeout: 30m
           script: |
             set -e
             cd /opt/nissan

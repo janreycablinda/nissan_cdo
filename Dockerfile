@@ -2,7 +2,10 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install
+# `npm ci` over `npm install`: installs straight from the lockfile, so it's
+# faster and reproducible, and it can't quietly rewrite package-lock.json
+# mid-build the way `npm install` can.
+RUN npm ci
 
 # ---- Builder ----
 FROM node:20-alpine AS builder
